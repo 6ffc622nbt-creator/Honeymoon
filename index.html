@@ -713,7 +713,74 @@ function renderCurrencyPanel(city) {
   return panel;
 }
 
-// ── Render ──
+// ── Pull to Refresh ──
+function initPullToRefresh() {
+  let startY = 0;
+  let pulling = false;
+  let indicator = null;
+
+  document.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    pulling = window.scrollY === 0;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dist = e.touches[0].clientY - startY;
+    // Only trigger when pulling DOWN from top
+    if (dist > 10 && window.scrollY === 0) {
+      if (!indicator) {
+        indicator = document.createElement('div');
+        // Position below sticky header (header ~53px + tabs ~46px = ~100px)
+        indicator.setAttribute('style', 'position:fixed;top:99px;left:0;right:0;z-index:150;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:#111;border-bottom:1px solid #1e1e26;font-size:12px;color:#555;opacity:0;pointer-events:none;');
+        indicator.textContent = '↓ Pull to refresh';
+        document.body.appendChild(indicator);
+      }
+      const progress = Math.min(dist / 80, 1);
+      indicator.style.opacity = progress;
+      indicator.textContent = dist > 70 ? '↑ Release to refresh' : '↓ Pull to refresh';
+      if (dist > 70) indicator.style.color = '#aaa';
+      else indicator.style.color = '#555';
+    } else if (dist <= 0 && indicator) {
+      indicator.remove();
+      indicator = null;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!pulling) return;
+    const dist = e.changedTouches[0].clientY - startY;
+    pulling = false;
+    if (indicator) { indicator.remove(); indicator = null; }
+
+    if (dist > 70 && window.scrollY === 0) {
+      // Show refreshing state briefly
+      const refreshing = document.createElement('div');
+      refreshing.setAttribute('style', 'position:fixed;top:99px;left:0;right:0;z-index:150;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;background:#111;border-bottom:1px solid #1e1e26;font-size:12px;color:#E8624A;');
+      refreshing.textContent = '⟳ Refreshing…';
+      document.body.appendChild(refreshing);
+
+      // Clear all caches
+      Object.keys(weatherCache).forEach(k => delete weatherCache[k]);
+      liveRates = null;
+
+      // Re-fetch Firebase data
+      DATA_REF.once('value').then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          state.data = data;
+          if (!state.activeCityId || !state.data.cities.find(c => c.id === state.activeCityId)) {
+            state.activeCityId = state.data.cities[0]?.id || null;
+          }
+        }
+        refreshing.remove();
+        render();
+      }).catch(() => { refreshing.remove(); render(); });
+    }
+    startY = 0;
+  }, { passive: true });
+}
+
 function render() {
   try {
     if (!authState.viewed) { renderPasswordScreen('view'); return; }
@@ -1040,7 +1107,7 @@ async function fetchWeather(cityName) {
 
     // Fetch air quality + pollen separately from Open-Meteo AQI endpoint
     try {
-      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=us_aqi,grass_pollen,tree_pollen,weed_pollen&timezone=auto`;
+      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=us_aqi,grass_pollen,birch_pollen,ragweed_pollen&timezone=auto&domains=cams_europe`;
       const aqiRes = await fetch(aqiUrl);
       const aqiData = await aqiRes.json();
       data.airQuality = aqiData.current;
@@ -1176,8 +1243,8 @@ function buildWeatherContent(cityName, data, weatherView) {
   const aqiColor = aqiVal === null ? '#555' : aqiVal <= 50 ? '#7AC67A' : aqiVal <= 100 ? '#E8C84A' : '#E8624A';
 
   const grassPollen = aqi && aqi.grass_pollen != null ? aqi.grass_pollen : null;
-  const treePollen  = aqi && aqi.tree_pollen  != null ? aqi.tree_pollen  : null;
-  const weedPollen  = aqi && aqi.weed_pollen  != null ? aqi.weed_pollen  : null;
+  const treePollen  = aqi && aqi.birch_pollen  != null ? aqi.birch_pollen  : null;
+  const weedPollen  = aqi && aqi.ragweed_pollen != null ? aqi.ragweed_pollen : null;
   const maxPollen = (grassPollen !== null && treePollen !== null && weedPollen !== null)
     ? Math.max(grassPollen, treePollen, weedPollen) : null;
   const pollenLabel = maxPollen === null ? '–' : maxPollen <= 10 ? 'Low' : maxPollen <= 50 ? 'Moderate' : maxPollen <= 200 ? 'High' : 'Very High';
@@ -2267,6 +2334,7 @@ try {
 
   // Start Firebase sync
   startFirebaseSync();
+  initPullToRefresh();
 
   // Fallback after 2 seconds if Firebase hasn't responded
   setTimeout(() => {
