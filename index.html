@@ -38,7 +38,7 @@
 .tab-btn.active { border-bottom-color: var(--c); color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
 .tab-add { flex-shrink: 0; background: none; border: none; color: #444; padding: 13px 12px; font-size: 22px; cursor: pointer; }
 
-.main { padding: 20px; max-width: 760px; margin: 0 auto; padding-bottom: 120px; }
+.main { padding: 20px; max-width: 760px; margin: 0 auto; padding-bottom: 60px; }
 
 .city-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 .city-title { display: flex; align-items: center; gap: 10px; }
@@ -114,7 +114,7 @@
 .btn-secondary { background: transparent; color: #aaa; border: 1px solid #333; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-.save-indicator { position: fixed; left: 50%; transform: translateX(-50%); background: #1e1e28; border: 1px solid #333; border-radius: 20px; padding: 7px 16px; font-size: 12px; color: #666; z-index: 201; pointer-events: none; transition: opacity 0.4s, bottom 0.3s ease; opacity: 0; }
+.save-indicator { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1e1e28; border: 1px solid #333; border-radius: 20px; padding: 7px 16px; font-size: 12px; color: #666; z-index: 201; pointer-events: none; transition: opacity 0.4s; opacity: 0; }
 
 .dragging { opacity: 0.4; }
 .drag-over { border-color: #fff !important; }
@@ -419,8 +419,7 @@ function startFirebaseSync() {
 function flashSaved() {
   const indicator = document.getElementById('saveIndicator');
   if (!indicator) return;
-  const isOpen = !!state.openPanels['currency_bar'];
-  indicator.style.bottom = isOpen ? '138px' : '52px';
+  indicator.style.bottom = '16px';
   indicator.textContent = '☁️ Synced';
   indicator.style.opacity = '1';
   setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
@@ -495,51 +494,30 @@ function openFileViewer(f) {
   document.body.appendChild(overlay);
 }
 
-// ── Currency ──
-const CITY_CURRENCIES = {
-  'Rome':        { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-  'Riomaggiore': { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-  'Florence':    { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-  'Dublin':      { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
-};
-const FALLBACK_CURRENCIES = [
-  { code: 'EUR', symbol: '€',  name: 'Euro',            rate: 0.92 },
-  { code: 'GBP', symbol: '£',  name: 'British Pound',   rate: 0.79 },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', rate: 1.36 },
-  { code: 'JPY', symbol: '¥',  name: 'Japanese Yen',    rate: 149.5 },
-];
-
-// Preserve converter state across renders
+// ── Currency Panel ──
 let currencyState = { eurValue: '', selectedCode: 'USD' };
 
-function renderCurrencyBar(city) {
-  const existing = document.getElementById('currencyBar');
-  if (existing) existing.remove();
+function renderCurrencyPanel(city) {
+  const panelKey = city.id + '_currency';
+  const isOpen = !!state.openPanels[panelKey];
 
-  const barKey = 'currency_bar';
-  const isOpen = !!state.openPanels[barKey];
-
-  const bar = document.createElement('div');
-  bar.id = 'currencyBar';
-  bar.setAttribute('style', 'position:fixed;bottom:0;left:0;right:0;z-index:150;background:#0E0E12;border-top:1px solid #1e1e26;');
-
-  const tab = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;padding:10px 20px;cursor:pointer;user-select:none;max-width:760px;margin:0 auto;' });
-  const tabLeft = el('div', { style: 'display:flex;align-items:center;gap:8px' });
-  tabLeft.appendChild(el('span', { style: 'font-size:16px' }, '💱'));
-  tabLeft.appendChild(el('span', { style: 'font-size:13px;font-weight:600;color:#aaa' }, 'Currency Converter'));
-  const tabChev = el('span', { style: 'color:#444;font-size:11px' }, isOpen ? '▼' : '▲');
-  tab.appendChild(tabLeft);
-  tab.appendChild(tabChev);
-  tab.addEventListener('click', () => {
-    state.openPanels[barKey] = !isOpen;
+  const panel = el('div', { className: 'panel', style: `--pc:${city.color};margin-top:24px;border-color:${city.color}` });
+  const header = el('div', { className: 'panel-header' });
+  const titleDiv = el('div', { className: 'panel-title filled' });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, '💱'));
+  titleDiv.appendChild(el('span', {}, 'Currency Converter'));
+  header.appendChild(titleDiv);
+  const chev = el('span', { className: 'panel-chevron' }, isOpen ? '▲' : '▼');
+  header.appendChild(chev);
+  header.addEventListener('click', () => {
+    state.openPanels[panelKey] = !isOpen;
     render();
   });
-  bar.appendChild(tab);
+  panel.appendChild(header);
 
   if (isOpen) {
-    const content = el('div', { style: 'padding:0 20px 16px;max-width:760px;margin:0 auto;' });
+    const body = el('div', { className: 'panel-body' });
 
-    // Build target currency options (everything except EUR)
     const targetCurrencies = [
       { code: 'USD', symbol: '$',  name: 'US Dollar',       rate: 1.09 },
       { code: 'GBP', symbol: '£',  name: 'British Pound',   rate: 0.86 },
@@ -549,9 +527,8 @@ function renderCurrencyBar(city) {
 
     if (!currencyState.selectedCode) currencyState.selectedCode = 'USD';
 
-    const row = el('div', { style: 'display:flex;align-items:center;gap:10px' });
+    const row = el('div', { style: 'display:flex;align-items:center;gap:10px;margin-top:8px' });
 
-    // EUR input
     const eurWrap = el('div', { style: 'display:flex;align-items:center;gap:6px;flex:1;background:#111;border:1px solid #2a2a35;border-radius:8px;padding:8px 12px' });
     eurWrap.appendChild(el('span', { style: 'color:#666;font-size:14px;font-weight:700;flex-shrink:0' }, '€'));
     const eurInput = document.createElement('input');
@@ -560,14 +537,10 @@ function renderCurrencyBar(city) {
     eurInput.value = currencyState.eurValue;
     eurInput.setAttribute('inputmode', 'decimal');
     eurInput.setAttribute('style', 'background:none;border:none;color:#fff;font-size:16px;font-weight:600;outline:none;width:100%;-webkit-appearance:none;');
-    eurInput.addEventListener('input', () => {
-      currencyState.eurValue = eurInput.value;
-      convert();
-    });
+    eurInput.addEventListener('input', () => { currencyState.eurValue = eurInput.value; convert(); });
     eurWrap.appendChild(eurInput);
     row.appendChild(eurWrap);
 
-    // Target currency dropdown
     const select = document.createElement('select');
     select.className = 'form-select';
     select.setAttribute('style', 'flex:1;max-width:160px');
@@ -576,47 +549,34 @@ function renderCurrencyBar(city) {
       if (opt.code === currencyState.selectedCode) o.selected = true;
       select.appendChild(o);
     });
-    select.addEventListener('change', () => {
-      currencyState.selectedCode = select.value;
-      convert();
-    });
+    select.addEventListener('change', () => { currencyState.selectedCode = select.value; convert(); });
     row.appendChild(select);
-    content.appendChild(row);
+    body.appendChild(row);
 
-    // Result
-    const result = el('div', { style: 'margin-top:10px;text-align:center;font-size:26px;font-weight:700;color:#E8624A;min-height:36px;letter-spacing:-0.5px' }, '');
-    const rateNote = el('div', { style: 'text-align:center;font-size:11px;color:#444;margin-top:2px' }, '');
-    content.appendChild(result);
-    content.appendChild(rateNote);
+    const result = el('div', { style: 'margin-top:12px;text-align:center;font-size:26px;font-weight:700;color:#E8624A;min-height:36px;letter-spacing:-0.5px' }, '');
+    const rateNote = el('div', { style: 'text-align:center;font-size:11px;color:#444;margin-top:2px;margin-bottom:4px' }, '');
+    body.appendChild(result);
+    body.appendChild(rateNote);
 
     function convert() {
       const eur = parseFloat(eurInput.value);
       const code = select.value;
       const cur = targetCurrencies.find(o => o.code === code);
-      if (!cur || isNaN(eur) || eurInput.value === '') {
-        result.textContent = '';
-        rateNote.textContent = '';
-        return;
-      }
-      const converted = (eur * cur.rate).toFixed(2);
-      result.textContent = `${cur.symbol}${converted} ${cur.code}`;
+      if (!cur || isNaN(eur) || eurInput.value === '') { result.textContent = ''; rateNote.textContent = ''; return; }
+      result.textContent = `${cur.symbol}${(eur * cur.rate).toFixed(2)} ${cur.code}`;
       rateNote.textContent = `1 EUR = ${cur.rate} ${cur.code} · Approximate rate`;
     }
 
     if (currencyState.eurValue) convert();
-
-    bar.appendChild(content);
+    panel.appendChild(body);
   }
 
-  document.body.appendChild(bar);
+  return panel;
 }
 
 // ── Render ──
 function render() {
   try {
-    const existingBar = document.getElementById('currencyBar');
-    if (existingBar) existingBar.remove();
-
     if (!authState.viewed) { renderPasswordScreen('view'); return; }
     const app = document.getElementById('app');
     while (app.firstChild) app.removeChild(app.firstChild);
@@ -698,9 +658,6 @@ function renderApp() {
   }
   frag.appendChild(main);
 
-  // Currency bar renders directly to body (fixed positioning)
-  renderCurrencyBar(city);
-
   if (state.modal) frag.appendChild(renderModal());
 
   return frag;
@@ -753,6 +710,7 @@ function renderCity(city) {
   }
 
   frag.appendChild(renderThingsToDoPanel(city));
+  frag.appendChild(renderCurrencyPanel(city));
 
   return frag;
 }
@@ -923,7 +881,7 @@ async function fetchWeather(cityName) {
   try {
     const coords = await getCoords(cityName);
     if (!coords) return null;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
     const res = await fetch(url);
     const data = await res.json();
     weatherCache[cityName] = { ts: now, data };
@@ -957,17 +915,25 @@ function renderWeatherPanel(city) {
     const body = el('div', { className: 'panel-body' });
     const cached = weatherCache[city.name];
 
-    if (cached) {
+    if (cached && cached.error) {
+      body.appendChild(el('div', { style: 'padding:16px 0;color:#555;font-size:13px;text-align:center' }, '⚠️ Unable to load weather. Check connection.'));
+    } else if (cached && cached.data) {
       body.appendChild(buildWeatherContent(city.name, cached.data, weatherView));
     } else {
-      // Loading state
       const loading = el('div', { style: 'display:flex;align-items:center;gap:8px;padding:16px 0;color:#444;font-size:13px' });
       const spinner = el('div', { style: 'width:16px;height:16px;border:2px solid #333;border-top-color:'+city.color+';border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0' });
       loading.appendChild(spinner);
       loading.appendChild(el('span', {}, 'Fetching live weather…'));
       body.appendChild(loading);
-      // Fetch and re-render
-      fetchWeather(city.name).then(() => render());
+      fetchWeather(city.name).then(data => {
+        if (data) {
+          render();
+        } else {
+          // Store error sentinel so we don't retry endlessly
+          weatherCache[city.name] = { ts: Date.now(), data: null, error: true };
+          render();
+        }
+      });
     }
 
     panel.appendChild(body);
@@ -986,12 +952,12 @@ function buildWeatherContent(cityName, data, weatherView) {
   curLeft.appendChild(el('div', { style: 'font-size:38px;line-height:1' }, getWMOIcon(c.weather_code)));
   const tempWrap = el('div', { style: 'display:flex;align-items:flex-start;gap:2px' });
   tempWrap.appendChild(el('div', { style: 'font-size:42px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1' }, Math.round(c.temperature_2m) + ''));
-  tempWrap.appendChild(el('div', { style: 'font-size:18px;color:#666;margin-top:5px' }, '°C'));
+  tempWrap.appendChild(el('div', { style: 'font-size:18px;color:#666;margin-top:5px' }, '°F'));
   curLeft.appendChild(tempWrap);
   cur.appendChild(curLeft);
   const curRight = el('div', { style: 'text-align:right' });
   curRight.appendChild(el('div', { style: 'font-size:14px;color:#aaa;margin-bottom:3px;font-weight:500' }, getWMODesc(c.weather_code)));
-  curRight.appendChild(el('div', { style: 'font-size:12px;color:#555' }, `Feels like ${Math.round(c.apparent_temperature)}°`));
+  curRight.appendChild(el('div', { style: 'font-size:12px;color:#555' }, `Feels like ${Math.round(c.apparent_temperature)}°F`));
   curRight.appendChild(el('div', { style: `font-size:11px;color:#E8624A;font-weight:600;letter-spacing:0.5px;margin-top:2px` }, cityName.toUpperCase()));
   cur.appendChild(curRight);
   frag.appendChild(cur);
@@ -1000,7 +966,7 @@ function buildWeatherContent(cityName, data, weatherView) {
   const stats = el('div', { style: 'display:flex;gap:6px;margin-bottom:12px' });
   [
     { icon:'💧', val:`${c.relative_humidity_2m}%`, label:'Humidity' },
-    { icon:'💨', val:`${Math.round(c.wind_speed_10m)} km/h`, label:'Wind' },
+    { icon:'💨', val:`${Math.round(c.wind_speed_10m)} mph`, label:'Wind' },
     { icon:'🌧', val:`${c.precipitation_probability ?? 0}%`, label:'Rain' },
   ].forEach(s => {
     const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
@@ -1039,7 +1005,7 @@ function buildWeatherContent(cityName, data, weatherView) {
       const card = el('div', { style: `flex-shrink:0;background:#111;border:1px solid ${isNow?'#E8624A':'#1e1e26'};${isNow?'background:rgba(232,98,74,0.08);':''}border-radius:12px;padding:10px 8px;text-align:center;min-width:55px` });
       card.appendChild(el('div', { style: `font-size:11px;font-weight:600;margin-bottom:5px;${isNow?'color:#E8624A':'color:#555'}` }, label));
       card.appendChild(el('div', { style: 'font-size:18px;margin-bottom:5px' }, getWMOIcon(hours.weather_code[i])));
-      card.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee;margin-bottom:3px' }, Math.round(hours.temperature_2m[i]) + '°'));
+      card.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee;margin-bottom:3px' }, Math.round(hours.temperature_2m[i]) + '°F'));
       card.appendChild(el('div', { style: 'font-size:10px;color:#4A90E2' }, `💧${hours.precipitation_probability[i]}%`));
       scroll.appendChild(card);
     }
@@ -1056,8 +1022,8 @@ function buildWeatherContent(cityName, data, weatherView) {
       row.appendChild(el('div', { style: 'font-size:20px;flex-shrink:0' }, getWMOIcon(daily.weather_code[i])));
       row.appendChild(el('div', { style: 'flex:1;font-size:12px;color:#555' }, getWMODesc(daily.weather_code[i])));
       const temps = el('div', { style: 'display:flex;gap:6px;align-items:center;flex-shrink:0' });
-      temps.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee' }, Math.round(daily.temperature_2m_max[i]) + '°'));
-      temps.appendChild(el('div', { style: 'font-size:12px;color:#444' }, Math.round(daily.temperature_2m_min[i]) + '°'));
+      temps.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee' }, Math.round(daily.temperature_2m_max[i]) + '°F'));
+      temps.appendChild(el('div', { style: 'font-size:12px;color:#444' }, Math.round(daily.temperature_2m_min[i]) + '°F'));
       row.appendChild(temps);
       row.appendChild(el('div', { style: 'font-size:11px;color:#4A90E2;width:30px;text-align:right;flex-shrink:0' }, `💧${daily.precipitation_probability_max[i]}%`));
       frag.appendChild(row);
