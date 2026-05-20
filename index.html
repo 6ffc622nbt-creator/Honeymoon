@@ -12,6 +12,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0E0E12; color: #fff; font-family: -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -360,6 +361,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const storage = firebase.storage();
 const DATA_REF = db.ref('itinerary');
 
 let firebaseInitialized = false;
@@ -428,11 +430,12 @@ function openFileViewer(f) {
   const existing = document.getElementById('fileViewer');
   if (existing) existing.remove();
 
+  const fileUrl = f.url || f.data || '';
+
   const overlay = document.createElement('div');
   overlay.id = 'fileViewer';
   overlay.setAttribute('style', 'position:fixed;inset:0;background:#000;z-index:2000;display:flex;flex-direction:column;');
 
-  // Header
   const header = document.createElement('div');
   header.setAttribute('style', 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#111;border-bottom:1px solid #222;flex-shrink:0;');
   const fileName = document.createElement('div');
@@ -446,7 +449,6 @@ function openFileViewer(f) {
   header.appendChild(closeBtn);
   overlay.appendChild(header);
 
-  // Content
   const content = document.createElement('div');
   content.setAttribute('style', 'flex:1;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:flex-start;justify-content:center;background:#000;');
 
@@ -455,29 +457,25 @@ function openFileViewer(f) {
     wrapper.setAttribute('style', 'width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;');
     const img = document.createElement('img');
     img.setAttribute('style', 'max-width:100%;height:auto;display:block;border-radius:4px;');
-    img.onload = () => { wrapper.style.alignItems = img.naturalHeight > img.naturalWidth ? 'flex-start' : 'center'; };
-    img.src = f.data;
+    img.src = fileUrl;
     wrapper.appendChild(img);
     content.appendChild(wrapper);
-
   } else if (f.type === 'application/pdf') {
+    // With a real URL, we can open in Safari directly
     const pdfCard = document.createElement('div');
     pdfCard.setAttribute('style', 'padding:40px 20px;text-align:center;width:100%;');
     pdfCard.innerHTML = '<div style="font-size:64px;margin-bottom:16px">📄</div>';
     const pdfName = document.createElement('div');
     pdfName.textContent = f.name || 'Document.pdf';
-    pdfName.setAttribute('style', 'color:#aaa;font-size:15px;margin-bottom:8px;word-break:break-all;');
-    const pdfNote = document.createElement('div');
-    pdfNote.textContent = 'PDF preview is not supported on this device.';
-    pdfNote.setAttribute('style', 'color:#555;font-size:13px;margin-bottom:28px;');
-    const dlBtn = document.createElement('a');
-    dlBtn.href = f.data;
-    dlBtn.download = f.name || 'document.pdf';
-    dlBtn.textContent = '⬇️ Save PDF to Device';
-    dlBtn.setAttribute('style', 'display:inline-block;background:#E8624A;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%;max-width:280px;text-decoration:none;box-sizing:border-box;');
+    pdfName.setAttribute('style', 'color:#aaa;font-size:15px;margin-bottom:24px;word-break:break-all;');
+    const openBtn = document.createElement('a');
+    openBtn.href = fileUrl;
+    openBtn.target = '_blank';
+    openBtn.rel = 'noopener noreferrer';
+    openBtn.textContent = '📂 Open PDF';
+    openBtn.setAttribute('style', 'display:inline-block;background:#E8624A;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;');
     pdfCard.appendChild(pdfName);
-    pdfCard.appendChild(pdfNote);
-    pdfCard.appendChild(dlBtn);
+    pdfCard.appendChild(openBtn);
     content.appendChild(pdfCard);
   } else {
     const msg = document.createElement('div');
@@ -1221,7 +1219,7 @@ function renderActivity(city, day, act) {
         if (f.type && f.type.startsWith('image/')) {
           const img = document.createElement('img');
           img.setAttribute('style', 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #333;display:block');
-          img.src = f.data;
+          img.src = f.url || f.data || '';
           thumb.appendChild(img);
           thumb.addEventListener('click', () => openFileViewer(f));
         } else {
@@ -1626,7 +1624,7 @@ function renderActivityModal({ cityId, dayId, activity }) {
       if (f.type && f.type.startsWith('image/')) {
         const img = document.createElement('img');
         img.setAttribute('style', 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #333');
-        img.src = f.data;
+        img.src = f.url || f.data || '';
         thumb.appendChild(img);
       } else {
         thumb.appendChild(el('div', { style: 'width:60px;height:60px;border-radius:6px;border:1px solid #333;background:#1e1e28;display:flex;align-items:center;justify-content:center;font-size:24px' }, '📄'));
@@ -1651,16 +1649,40 @@ function renderActivityModal({ cityId, dayId, activity }) {
   fileInput.style.cssText = 'display:none';
   fileInput.addEventListener('change', () => {
     const toLoad = Array.from(fileInput.files);
-    let loaded = 0;
+    if (toLoad.length === 0) return;
+
+    uploadBtn.textContent = '⏳ Uploading…';
+    uploadBtn.style.color = '#E8624A';
+
+    let completed = 0;
     toLoad.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        if (!form.files) form.files = [];
-        form.files.push({ name: file.name, type: file.type, data: e.target.result });
-        loaded++;
-        if (loaded === toLoad.length) renderFileThumbs();
-      };
-      reader.readAsDataURL(file);
+      const path = `attachments/${genId()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const ref = storage.ref(path);
+      const uploadTask = ref.put(file);
+
+      uploadTask.on('state_changed',
+        null,
+        err => {
+          console.error('Upload error:', err);
+          completed++;
+          if (completed === toLoad.length) {
+            uploadBtn.textContent = '📎 Tap to attach file';
+            uploadBtn.style.color = '#888';
+            renderFileThumbs();
+          }
+        },
+        async () => {
+          const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+          if (!form.files) form.files = [];
+          form.files.push({ name: file.name, type: file.type, url: downloadURL, path });
+          completed++;
+          if (completed === toLoad.length) {
+            uploadBtn.textContent = '📎 Tap to attach file';
+            uploadBtn.style.color = '#888';
+            renderFileThumbs();
+          }
+        }
+      );
     });
     fileInput.value = '';
   });
