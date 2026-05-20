@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="Honeymoon">
 <title>Honeymoon 2026</title>
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #0E0E12; color: #fff; font-family: -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
@@ -1842,23 +1842,23 @@ function appendInfoField(parent, label, value, mono = false) {
 
 // ── Boot ──
 try {
-  // Show loading screen while Firebase connects
   const app = document.getElementById('app');
   const loading = document.createElement('div');
   loading.setAttribute('style', 'min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0E0E12;');
   loading.innerHTML = '<div style="font-size:48px;margin-bottom:16px">🍾</div><div style="color:#444;font-size:14px">Loading itinerary…</div>';
   app.appendChild(loading);
 
-  // Start Firebase sync — render() fires once data arrives
+  // Start Firebase sync
   startFirebaseSync();
 
-  // Fallback: if Firebase takes too long, render anyway
+  // Fallback after 3 seconds if Firebase hasn't responded
   setTimeout(() => {
     if (!firebaseInitialized) {
+      console.warn('Firebase timeout — rendering with default data');
       firebaseInitialized = true;
       render();
     }
-  }, 5000);
+  }, 3000);
 } catch(e) {
   console.error('Boot error:', e);
   render();
