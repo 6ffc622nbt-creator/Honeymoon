@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Honeymoon">
+<title>Honeymoon 2026</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0E0E12; color: #fff; font-family: -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+  input, textarea, select, button { font-family: inherit; }
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 999px #0E0E12 inset !important;
+    -webkit-text-fill-color: #888 !important;
+    caret-color: #888;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+
+.header { position: sticky; top: 0; z-index: 100; background: #0E0E12; border-bottom: 1px solid #1E1E26; padding: 16px 20px; display: flex; align-items: center; }
+.header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; cursor: pointer; flex: 1; color: #fff; }
+.header h1 span { font-size: 13px; color: #444; font-weight: 400; margin-left: 6px; }
+.title-input { background: none; border: none; border-bottom: 2px solid #E8624A; color: #fff; font-size: 20px; font-weight: 700; outline: none; flex: 1; }
+
+.tabs { display: flex; overflow-x: auto; border-bottom: 1px solid #1E1E26; background: #0E0E12; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab-btn { flex-shrink: 0; background: none; border: none; border-bottom: 3px solid transparent; padding: 13px 16px; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.tab-btn.active { border-bottom-color: var(--c); color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+.tab-add { flex-shrink: 0; background: none; border: none; color: #444; padding: 13px 12px; font-size: 22px; cursor: pointer; }
+
+.main { padding: 20px; max-width: 760px; margin: 0 auto; padding-bottom: 120px; }
+
+.city-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.city-title { display: flex; align-items: center; gap: 10px; }
+.city-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.city-name { font-size: 24px; font-weight: 700; }
+.icon-btn { background: none; border: none; color: #555; cursor: pointer; font-size: 15px; padding: 4px 6px; }
+
+.panel { margin-bottom: 12px; border-radius: 12px; overflow: hidden; border: 1px solid #222; background: #111; }
+.panel.filled { border-color: var(--pc); background: color-mix(in srgb, var(--pc) 8%, #0E0E12); }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; cursor: pointer; user-select: none; }
+.panel-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.panel-title.empty { color: #555; }
+.panel-title.filled { color: #eee; }
+.panel-hint { font-size: 11px; color: #444; font-style: italic; }
+.panel-actions { display: flex; align-items: center; gap: 8px; }
+.panel-edit { background: none; border: none; color: #555; cursor: pointer; font-size: 12px; padding: 3px 8px; }
+.panel-chevron { color: #444; font-size: 11px; }
+.panel-body { padding: 4px 14px 14px; border-top: 1px solid #1e1e26; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin-top: 10px; }
+.info-field { margin-bottom: 10px; }
+.info-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+.info-value { font-size: 14px; color: #ddd; }
+.info-value.mono { font-family: monospace; background: #0a0a0e; padding: 3px 7px; border-radius: 5px; display: inline-block; }
+.info-link { color: #4A90E2; text-decoration: none; font-size: 14px; border-bottom: 1px dashed rgba(74,144,226,0.3); display: inline-flex; align-items: center; gap: 4px; }
+
+.day-block { margin-bottom: 24px; }
+.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+.day-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-badge { color: #fff; border-radius: 7px; padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.day-date-input { background: #1a1a20; border: 1px solid #2a2a35; border-radius: 7px; color: #ccc; font-weight: 600; font-size: 13px; padding: 4px 8px; outline: none; cursor: pointer; }
+.day-label-input { background: transparent; border: none; border-bottom: 1px dashed #333; color: #888; font-size: 13px; font-style: italic; padding: 3px 2px; outline: none; width: 100%; display: block; }
+.day-right { display: flex; gap: 6px; align-items: center; }
+.remove-day { background: none; border: none; color: #444; cursor: pointer; font-size: 12px; }
+
+.activity { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; background: #111; border-radius: 10px; margin-bottom: 7px; border: 1px solid #222; transition: border-color 0.15s; cursor: grab; user-select: none; }
+.activity:active { cursor: grabbing; }
+.activity-drag { color: #333; font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+.activity-time { width: 60px; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; line-height: 1.4; }
+.activity-body { flex: 1; min-width: 0; }
+.activity-title { color: #eee; font-weight: 600; font-size: 14px; }
+.activity-notes { color: #666; font-size: 12px; margin-top: 3px; }
+.activity-link { font-size: 11px; text-decoration: none; margin-top: 4px; display: block; }
+.activity-actions { display: flex; gap: 2px; flex-shrink: 0; }
+
+.empty-days { text-align: center; padding: 50px 0; color: #444; border: 2px dashed #222; border-radius: 14px; }
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+.empty-acts { padding: 16px; text-align: center; color: #444; border: 1px dashed #222; border-radius: 8px; font-size: 13px; }
+.empty-link { cursor: pointer; text-decoration: underline; }
+.empty-city { text-align: center; padding: 70px 0; color: #444; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
+@media (min-width: 600px) { .modal-overlay { align-items: center; } }
+.modal { background: #1C1C22; border: 1px solid #2a2a35; border-radius: 20px 20px 0 0; padding: 28px 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (min-width: 600px) { .modal { border-radius: 16px; } }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 20px; color: #fff; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { color: #888; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; display: block; }
+.form-input { width: 100%; background: #111; border: 1px solid #2a2a35; border-radius: 8px; color: #fff; padding: 10px 12px; font-size: 15px; outline: none; -webkit-appearance: none; }
+.form-input:focus { border-color: #444; }
+.form-select { width: 100%; background: #111; border: 1px solid #2a2a35; border-radius: 8px; color: #fff; padding: 10px 12px; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
+.form-textarea { width: 100%; background: #111; border: 1px solid #2a2a35; border-radius: 8px; color: #fff; padding: 10px 12px; font-size: 15px; outline: none; resize: vertical; min-height: 70px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.color-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.1s; flex-shrink: 0; }
+.color-swatch.selected { border-color: #fff; transform: scale(1.15); }
+
+.btn { border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; letter-spacing: 0.2px; border: none; padding: 10px 18px; transition: opacity 0.15s; -webkit-tap-highlight-color: transparent; }
+.btn:active { opacity: 0.75; }
+.btn-primary { color: #fff; }
+.btn-secondary { background: transparent; color: #aaa; border: 1px solid #333; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+.save-indicator { position: fixed; left: 50%; transform: translateX(-50%); background: #1e1e28; border: 1px solid #333; border-radius: 20px; padding: 7px 16px; font-size: 12px; color: #666; z-index: 201; pointer-events: none; transition: opacity 0.4s, bottom 0.3s ease; opacity: 0; }
+
+.dragging { opacity: 0.4; }
+.drag-over { border-color: #fff !important; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="save-indicator" id="saveIndicator">✓ Saved</div>
+
+<script>
+const COLORS = ["#E8624A","#4A90E2","#7AC67A","#E2A84A","#B07AC6","#4AC6C6","#E24A7A","#7A9CE2","#C6A84A","#4AC68E"];
+const genId = () => Math.random().toString(36).substr(2,9);
+
+const DEFAULT_DATA = {
+  title: "Honeymoon 2026 🍾",
+  cities: [
+    { id: genId(), name: "Rome", color: COLORS[0],
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:"Flight", operator:"Air Canada", flightNumber:"AC890", departure:"Toronto Pearson (YYZ)", arrival:"Rome Fiumicino (FCO)", departureTime:"May 20 at 7:45 PM", arrivalTime:"May 21 at 10:20 AM", confirmation:"BUSFCU", notes:"Flight duration 8h 35m. E-ticket — check Air Canada app." },
+      accommodation: { name:"The Domes of Borromini - Charming Apartment", address:"Via dei Leutari, 29, 00186 Rome, Italy", doorCode:"Lockbox — self check-in. Contact Stefano for code.", checkIn:"May 21 after 2:00 PM", checkOut:"May 23 by 10:00 AM", confirmationNumber:"HMCFSEXTJS", wifiName:"", wifiPassword:"", notes:"Host: Stefano. Phone: +39 335 105 3539. 4 guests max. Quiet hours 10pm–8am. Pets allowed." },
+      days: [
+        { id:genId(), date:"2026-05-20", label:"Departure Day — Toronto to Rome",
+          activities:[
+            { id:genId(), time:"3:30 PM", title:"🅿️ Drop car — The Westin Toronto Airport", notes:"Parking Type: Self Uncovered · 12 days\nDrop-off: May 20 at 3:30 PM · Pick-up: May 31 at 4:30 PM\nBooked via ParkSleepFly.com under Max Roberts · Phone: 416-675-9444", address:"950 Dixon Rd, Toronto, ON M9W 5N4", link:"" },
+            { id:genId(), time:"7:45 PM", title:"✈️ Air Canada AC890 departs Toronto Pearson (YYZ)", notes:"Confirmation: BUSFCU. Arrives Rome FCO May 21 at 10:20 AM. Flight duration 8h 35m.", address:"Toronto Pearson International Airport, Mississauga, ON", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-21", label:"Arrive Rome",
+          activities:[
+            { id:genId(), time:"10:20 AM", title:"📍 Arrive Rome Fiumicino (FCO)", notes:"Air Canada AC890 from Toronto. Confirmation: BUSFCU.", address:"Rome Fiumicino Airport, Via dell'Aeroporto di Fiumicino, Rome, Italy", link:"" },
+            { id:genId(), time:"2:00 PM", title:"🔑 Check in — The Domes of Borromini", notes:"Self check-in with lockbox. Call Stefano: +39 335 105 3539", address:"Via dei Leutari, 29, 00186 Rome, Italy", link:"" },
+            { id:genId(), time:"7:30 PM", title:"🍽 Dinner — Il Falchetto", notes:"Reservation for 4. Ref: BML29c9n", address:"Via dei Montecatini, 12, 00186 Roma, Italy", link:"" },
+            { id:genId(), time:"9:00 PM", title:"🌊 Visit the Trevi Fountain", notes:"5 min walk from Il Falchetto.", address:"Via della Muratte, 00187 Roma, Italy", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-22", label:"Rome — Colosseum & Dinner",
+          activities:[
+            { id:genId(), time:"", title:"🏛 Explore Rome", notes:"", link:"" },
+            { id:genId(), time:"1:20 PM", title:"Colosseum Visit", notes:"Booking ref: OCO3878891. Open 8:30 AM – 7:15 PM. Includes Roman Forum, Palatine Hill & Imperial Fora. Arrive 15 mins early. Show ID. No backpacks/suitcases. Arena ticket valid day only. Roman Forum/Palatine Hill valid 24h before or after.\n\nTICKETS:\nMax Roberts — SPCO3Y74LWKX3JEA\nSantina Phillips — SPCOKPJYXKEQB65Q\nConnor Story — SPCOW47GDJ686GGK\nJessica Harris — SPCOZPE4WA6LDBL4", address:"Piazza del Colosseo, 1, 00184 Roma, Italy", addressLabel:"Colosseum", extraAddresses:[ { label:"Roman Forum", addr:"Via Sacra, 00186 Roma, Italy" }, { label:"Palatine Hill", addr:"Via Sacra, 00186 Roma, Italy" }, { label:"Imperial Fora", addr:"Via dei Fori Imperiali, 00186 Roma, Italy" } ], link:"" },
+            { id:genId(), time:"7:00 PM", title:"🍽 Dinner — Dar Sor Olimpio al Drago", notes:"Reservation for 4 at 7:00 PM.", address:"Piazza del Drago, 2, 00153 Roma, Italy", link:"" }
+          ]}
+      ]
+    },
+    { id: genId(), name: "Riomaggiore", color: COLORS[1],
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:"Train", operator:"ItaliaRail / Trenitalia", flightNumber:"Frecciabianca 8616", departure:"Roma Termini", arrival:"La Spezia Centrale", departureTime:"May 23 at 11:57 AM CET", arrivalTime:"May 23 at 3:41 PM CET", confirmation:"AVC5K5", notes:"1st class. Maxwell seat 2/15C, Santina seat 2/15D. Then regional train 3274 (7 min) La Spezia → Riomaggiore at 3:50 PM, arrives 3:57 PM. PNR: AVC5GN. Order: EQQTMDRSUPTJK." },
+      accommodation: { name:"Agave Room Rental", address:"200 Via Antonio Gramsci, 19017 Riomaggiore, Italy", doorCode:"PIN: 4814 (Booking.com confidential)", checkIn:"May 23, 3:00 PM – 9:00 PM", checkOut:"May 25, 10:00 AM", confirmationNumber:"6016532013", wifiName:"", wifiPassword:"", notes:"Deluxe Double Room with Balcony and Sea View. 2 nights. Phone: +39 392 955 0946. Free cancellation until May 15." },
+      days: [
+        { id:genId(), date:"2026-05-23", label:"Travel day — Rome to Riomaggiore",
+          activities:[
+            { id:genId(), time:"11:57 AM", title:"Train: Roma Termini → La Spezia", notes:"Frecciabianca 8616 · 3h 44m · PNR: AVC5K5 · Maxwell 2/15C, Santina 2/15D", address:"Roma Termini, Piazza dei Cinquecento, 00185 Roma, Italy", extraAddresses:[{ label:"Arrival: La Spezia Centrale", addr:"Piazza Medaglie d'Oro, 19121 La Spezia, Italy" }], link:"" },
+            { id:genId(), time:"3:50 PM", title:"Train: La Spezia → Riomaggiore", notes:"Regional 3274 · 7 min · PNR: AVC5GN · Any available seat", address:"Piazza Medaglie d'Oro, 19121 La Spezia, Italy", extraAddresses:[{ label:"Arrival: Riomaggiore Station", addr:"Via Telemaco Signorini, 19017 Riomaggiore, Italy" }], link:"" },
+            { id:genId(), time:"3:57 PM", title:"📍 Arrive Riomaggiore — 🔑 Check in to Agave Room Rental", notes:"PIN: 4814. Call: +39 392 955 0946", address:"200 Via Antonio Gramsci, 19017 Riomaggiore, Italy", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-24", label:"Riomaggiore — Cinque Terre",
+          activities:[
+            { id:genId(), time:"9:00 AM", title:"🏖 Stella Marina Beach Bar", notes:"", address:"Bagni Stella Marina, Riomaggiore, Cinque Terre, Italy", link:"" },
+            { id:genId(), time:"1:45 PM", title:"🌿 Pesto Experience — Nessun Dorma", notes:"Reservation for 4. Cost: €340 total (pay after). Booked via jharris1227. In English. Bring ID. Free cancellation anytime.", address:"Località Punta Bonfiglio, 19017 Manarola, Italy", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-25", label:"Travel day — Riomaggiore to Florence",
+          activities:[
+            { id:genId(), time:"", title:"Check out Agave Room Rental by 10:00 AM", notes:"", link:"" },
+            { id:genId(), time:"", title:"Train to Florence — see Florence transport info", notes:"Trenitalia — forwarded by jharris1227. Check attached ticket PDF.", link:"" }
+          ]}
+      ]
+    },
+    { id: genId(), name: "Florence", color: COLORS[2],
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:"Train", operator:"ItaliaRail / Trenitalia", flightNumber:"", departure:"La Spezia / Riomaggiore", arrival:"Firenze Santa Maria Novella", departureTime:"May 25", arrivalTime:"May 25", confirmation:"", notes:"Trenitalia ticket forwarded by jharris1227@yahoo.com — PDF attached to email. Check your inbox." },
+      accommodation: { name:"Flow in Florence", address:"Via Panzani, 13, 50123 Firenze, Italy", doorCode:"", checkIn:"May 25 at 2:00 PM", checkOut:"May 29 at 10:00 AM", confirmationNumber:"CWDT5Y", wifiName:"", wifiPassword:"", notes:"Host: Edoardo. Phone: +39 055 0124121. 4 nights, 4 guests. Booked via Plum Guide." },
+      days: [
+        { id:genId(), date:"2026-05-25", label:"Arrive Florence",
+          activities:[
+            { id:genId(), time:"", title:"📍 Arrive Florence — 🔑 Check in to Flow in Florence", notes:"Booking code: CWDT5Y. Check-in from 2:00 PM. Host Edoardo: +39 055 0124121", address:"Via Panzani, 13, 50123 Firenze, Italy", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-26", label:"Florence — Explore",
+          activities:[
+            { id:genId(), time:"", title:"Explore Florence", notes:"", link:"" },
+            { id:genId(), time:"", title:"🍽 Dinner — La Giostra", notes:"Reservation for Santina Phillips on May 26. SevenRooms booking — check confirmation email for time.", address:"Borgo Pinti, 12r, 50121 Firenze, Italy", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-27", label:"Florence — Sightseeing",
+          activities:[
+            { id:genId(), time:"9:30 AM", title:"🍷 Tuscany Wine Tasting Tour — Walkabout Florence Tours", notes:"Booking ref: 1391655241 · Operator ref: VIA-90659807\n4 adults · Duration: 7 hours · English guide\nIncludes: wine tastings, olive oil, cheeses & salumi, traditional Tuscan lunch, 4x4 transport\nFree cancellation before 9:30 AM May 26, 2026\nQuestions: +39 055 264 5746", address:"Piazza della Stazione, 27, 50123 Firenze, Italy", addressLabel:"Meeting Point — Santa Maria Novella Station", link:"" },
+            { id:genId(), time:"", title:"Explore Florence", notes:"", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-28", label:"Florence — Last Day",
+          activities:[
+            { id:genId(), time:"", title:"🚆 Morning Trip to Bologna", notes:"Book your train time below — journey is approx 37 mins on the Frecciarossa.", address:"Bologna Centrale, Piazza delle Medaglie d'Oro, 40121 Bologna, Italy", link:"https://www.trenitalia.com/en.html#/booking?origin=Firenze+S.M.Novella&destination=Bologna+Centrale&date=2026-05-28" },
+            { id:genId(), time:"", title:"Explore Florence", notes:"", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-29", label:"Travel day — Florence to Dublin",
+          activities:[
+            { id:genId(), time:"6:00 AM", title:"Train: Firenze SMN → Roma Termini", notes:"Frecciarossa 9503 · 1h 49m · PNR: KEWKT5 · Maxwell seat 4/5A (Premium), Santina seat 4/5B · Order: M81L7LLLZ3JZM", address:"Firenze Santa Maria Novella, Piazza della Stazione, 50123 Firenze, Italy", extraAddresses:[{ label:"Arrival: Roma Termini", addr:"Roma Termini, Piazza dei Cinquecento, 00185 Roma, Italy" }], link:"" },
+            { id:genId(), time:"8:05 AM", title:"Train: Roma Termini → Fiumicino Airport (FCO)", notes:"Regional 4590 · 32 min · 1st class Leonardo Express · Any available seat", address:"Roma Termini, Piazza dei Cinquecento, 00185 Roma, Italy", extraAddresses:[{ label:"Arrival: Fiumicino Airport", addr:"Rome Fiumicino Airport, Via dell'Aeroporto di Fiumicino, 00054 Rome, Italy" }], link:"" },
+            { id:genId(), time:"11:10 AM", title:"✈️ Aer Lingus EI 0403 — FCO → Dublin (DUB)", notes:"Departs Terminal 3 FCO. Arrives Dublin 1:30 PM. Booking ref: 2FH65F. Maxwell & Santina. 10kg carry-on + 1x20kg checked bag each.", link:"" }
+          ]}
+      ]
+    },
+    { id: genId(), name: "Dublin", color: COLORS[3],
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:"Flight", operator:"Aer Lingus", flightNumber:"EI 0403", departure:"Florence (FCO via train)", arrival:"Dublin (DUB)", departureTime:"May 29, 11:10 AM CET", arrivalTime:"May 29, 1:30 PM", confirmation:"2FH65F", notes:"Terminal 3 FCO. Maxwell & Santina. 10kg cabin bag + 1x20kg checked bag each. No seats selected yet." },
+      accommodation: { name:"Zanzibar Locke, Hapenny Bridge", address:"Hapenny Bridge, Dublin, Ireland", doorCode:"", checkIn:"May 29", checkOut:"May 31", confirmationNumber:"", wifiName:"", wifiPassword:"", notes:"Booked via Locke Living. QR code in confirmation email." },
+      days: [
+        { id:genId(), date:"2026-05-29", label:"Arrive Dublin",
+          activities:[
+            { id:genId(), time:"1:30 PM", title:"📍 Arrive Dublin Airport (DUB)", notes:"Aer Lingus EI 0403 from Rome. Ref: 2FH65F", address:"Dublin Airport, Co. Dublin, Ireland", link:"" },
+            { id:genId(), time:"", title:"🔑 Check in — Zanzibar Locke, Hapenny Bridge", notes:"Booked via Locke Living. QR code in confirmation email.", address:"Hapenny Bridge, Dublin, Ireland", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-30", label:"Dublin — Guinness & Explore",
+          activities:[
+            { id:genId(), time:"12:00 PM", title:"🍺 Guinness Storehouse — Guinness Academy", notes:"Booking ref: 903896465. Booked for 30/05/2026 at 12:00 PM. Guinness Academy experience.", address:"St. James's Gate, Dublin 8, D08 VF8H, Ireland", link:"" },
+            { id:genId(), time:"", title:"Explore Dublin", notes:"", link:"" }
+          ]},
+        { id:genId(), date:"2026-05-31", label:"Fly home to Toronto",
+          activities:[
+            { id:genId(), time:"", title:"Check out Zanzibar Locke", notes:"", link:"" },
+            { id:genId(), time:"1:20 PM", title:"✈️ Aer Lingus EI 0127 — Dublin → Toronto Pearson (YYZ)", notes:"Departs Terminal 2 DUB. Arrives YYZ 3:50 PM. Booking ref: 2SZEIS. Maxwell seat 30G, Santina seat 30F. Economy. 1x23kg checked bag each.", link:"" }
+          ]}
+      ]
+    }
+  ]
+};
+
+// ── Passwords ──
+const VIEW_PASSWORD = 'HM';
+const EDIT_PASSWORD = 'EDIT';
+
+let authState = {
+  viewed: false,
+  editing: false,
+};
+
+// Restore persisted auth on load
+try {
+  if (localStorage.getItem('hm_viewed') === 'true') authState.viewed = true;
+  if (sessionStorage.getItem('hm_editing') === 'true') authState.editing = true;
+} catch(e) {}
+
+function renderPasswordScreen(type) {
+  const app = document.getElementById('app');
+  while (app.firstChild) app.removeChild(app.firstChild);
+
+  const screen = el('div', { style: 'min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;background:#0E0E12' });
+  const icon = el('div', { style: 'font-size:48px;margin-bottom:16px' }, '🍾');
+  const title = el('div', { style: 'font-size:22px;font-weight:700;color:#fff;margin-bottom:6px' }, 'Honeymoon 2026');
+  const sub = el('div', { style: 'font-size:14px;color:#555;margin-bottom:32px' }, type === 'view' ? 'Enter password to view' : 'Enter edit password to make changes');
+
+  const input = el('input', { type: 'password', className: 'form-input', placeholder: 'Password', style: 'max-width:280px;text-align:center;font-size:18px;letter-spacing:4px;margin-bottom:12px' });
+  const errMsg = el('div', { style: 'color:#cc5555;font-size:13px;min-height:20px;margin-bottom:16px;text-align:center' }, '');
+
+  const btn = makeBtn(type === 'view' ? 'View Itinerary' : 'Unlock Editing', '#E8624A');
+  btn.style.cssText = 'width:100%;max-width:280px;padding:14px;font-size:16px;background:#E8624A;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;';
+
+  function attempt() {
+    const val = input.value.trim().toUpperCase();
+    if (type === 'view') {
+      if (val === VIEW_PASSWORD) {
+        authState.viewed = true;
+        try { localStorage.setItem('hm_viewed', 'true'); } catch(e) {}
+        render();
+      } else {
+        errMsg.textContent = 'Incorrect password. Try again.';
+        input.value = '';
+        input.focus();
+      }
+    } else {
+      if (val === EDIT_PASSWORD) {
+        authState.editing = true;
+        try { sessionStorage.setItem('hm_editing', 'true'); } catch(e) {}
+        render();
+      } else {
+        errMsg.textContent = 'Incorrect password. Try again.';
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+
+  btn.addEventListener('click', attempt);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); });
+
+  if (type === 'edit') {
+    const cancelBtn = makeBtn('Cancel', null, false, 'secondary');
+    cancelBtn.style.cssText = 'width:100%;max-width:280px;margin-top:8px;background:transparent;color:#aaa;border:1px solid #333;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;';
+    cancelBtn.addEventListener('click', () => render());
+    screen.appendChild(icon);
+    screen.appendChild(title);
+    screen.appendChild(sub);
+    screen.appendChild(input);
+    screen.appendChild(errMsg);
+    screen.appendChild(btn);
+    screen.appendChild(cancelBtn);
+  } else {
+    screen.appendChild(icon);
+    screen.appendChild(title);
+    screen.appendChild(sub);
+    screen.appendChild(input);
+    screen.appendChild(errMsg);
+    screen.appendChild(btn);
+  }
+
+  app.appendChild(screen);
+  setTimeout(() => input.focus(), 100);
+}
+
+// ── State ──
+function calcActivityEndTime(start, dur) {
+  if (!start || !dur) return null;
+  const startMatch = start.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  const durMatch = dur.match(/(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?/i);
+  if (!startMatch || !durMatch || (!durMatch[1] && !durMatch[2])) return null;
+  let h = parseInt(startMatch[1]);
+  const m = parseInt(startMatch[2]);
+  const ampm = startMatch[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  let totalMins = h * 60 + m;
+  totalMins += (parseInt(durMatch[1] || 0)) * 60 + parseInt(durMatch[2] || 0);
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  const endAmpm = endH >= 12 ? 'PM' : 'AM';
+  const displayH = endH % 12 || 12;
+  return `${displayH}:${String(endM).padStart(2,'0')} ${endAmpm}`;
+}
+
+let state = {
+  data: loadData(),
+  activeCityId: null,
+  modal: null,
+  editingTitle: false,
+  openPanels: {},
+  dragSrc: null,
+};
+state.activeCityId = state.data.cities[0]?.id || null;
+
+function loadData() {
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('itinerary_v10', JSON.stringify(state.data));
+    } catch(e) {}
+    flashSaved();
+  }, 400);
+}
+
+function flashSaved() {
+  const indicator = document.getElementById('saveIndicator');
+  if (!indicator) return;
+  const isOpen = !!state.openPanels['currency_bar'];
+  // Collapsed bar ~44px, expanded bar ~130px
+  indicator.style.bottom = isOpen ? '138px' : '52px';
+  indicator.style.opacity = '1';
+  setTimeout(() => { indicator.style.opacity = '0'; }, 1800);
+}
+
+// ── File Viewer ──
+function openFileViewer(f) {
+  const existing = document.getElementById('fileViewer');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'fileViewer';
+  overlay.setAttribute('style', 'position:fixed;inset:0;background:#000;z-index:2000;display:flex;flex-direction:column;');
+
+  // Header
+  const header = document.createElement('div');
+  header.setAttribute('style', 'display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#111;border-bottom:1px solid #222;flex-shrink:0;');
+  const fileName = document.createElement('div');
+  fileName.textContent = f.name || 'Attachment';
+  fileName.setAttribute('style', 'color:#aaa;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:10px;');
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close';
+  closeBtn.setAttribute('style', 'background:#222;border:1px solid #444;border-radius:8px;color:#fff;font-size:13px;padding:6px 14px;cursor:pointer;flex-shrink:0;');
+  closeBtn.addEventListener('click', () => overlay.remove());
+  header.appendChild(fileName);
+  header.appendChild(closeBtn);
+  overlay.appendChild(header);
+
+  // Content
+  const content = document.createElement('div');
+  content.setAttribute('style', 'flex:1;width:100%;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:flex-start;justify-content:center;background:#000;');
+
+  if (f.type && f.type.startsWith('image/')) {
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('style', 'width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;');
+    const img = document.createElement('img');
+    img.setAttribute('style', 'max-width:100%;height:auto;display:block;border-radius:4px;');
+    img.onload = () => { wrapper.style.alignItems = img.naturalHeight > img.naturalWidth ? 'flex-start' : 'center'; };
+    img.src = f.data;
+    wrapper.appendChild(img);
+    content.appendChild(wrapper);
+
+  } else if (f.type === 'application/pdf') {
+    const pdfCard = document.createElement('div');
+    pdfCard.setAttribute('style', 'padding:40px 20px;text-align:center;width:100%;');
+    pdfCard.innerHTML = '<div style="font-size:64px;margin-bottom:16px">📄</div>';
+    const pdfName = document.createElement('div');
+    pdfName.textContent = f.name || 'Document.pdf';
+    pdfName.setAttribute('style', 'color:#aaa;font-size:15px;margin-bottom:8px;word-break:break-all;');
+    const pdfNote = document.createElement('div');
+    pdfNote.textContent = 'PDF preview is not supported on this device.';
+    pdfNote.setAttribute('style', 'color:#555;font-size:13px;margin-bottom:28px;');
+    const dlBtn = document.createElement('a');
+    dlBtn.href = f.data;
+    dlBtn.download = f.name || 'document.pdf';
+    dlBtn.textContent = '⬇️ Save PDF to Device';
+    dlBtn.setAttribute('style', 'display:inline-block;background:#E8624A;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%;max-width:280px;text-decoration:none;box-sizing:border-box;');
+    pdfCard.appendChild(pdfName);
+    pdfCard.appendChild(pdfNote);
+    pdfCard.appendChild(dlBtn);
+    content.appendChild(pdfCard);
+  } else {
+    const msg = document.createElement('div');
+    msg.setAttribute('style', 'padding:40px;text-align:center;');
+    const msgIcon = document.createElement('div');
+    msgIcon.textContent = '📄';
+    msgIcon.setAttribute('style', 'font-size:48px;margin-bottom:16px');
+    const msgName = document.createElement('div');
+    msgName.textContent = f.name || 'File';
+    msgName.setAttribute('style', 'color:#aaa;font-size:15px;');
+    msg.appendChild(msgIcon);
+    msg.appendChild(msgName);
+    content.appendChild(msg);
+  }
+
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+}
+
+// ── Currency ──
+const CITY_CURRENCIES = {
+  'Rome':        { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
+  'Riomaggiore': { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
+  'Florence':    { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
+  'Dublin':      { code: 'EUR', symbol: '€', name: 'Euro', rate: 0.92 },
+};
+const FALLBACK_CURRENCIES = [
+  { code: 'EUR', symbol: '€',  name: 'Euro',            rate: 0.92 },
+  { code: 'GBP', symbol: '£',  name: 'British Pound',   rate: 0.79 },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', rate: 1.36 },
+  { code: 'JPY', symbol: '¥',  name: 'Japanese Yen',    rate: 149.5 },
+];
+
+// Preserve converter state across renders
+let currencyState = { eurValue: '', selectedCode: 'USD' };
+
+function renderCurrencyBar(city) {
+  const existing = document.getElementById('currencyBar');
+  if (existing) existing.remove();
+
+  const barKey = 'currency_bar';
+  const isOpen = !!state.openPanels[barKey];
+
+  const bar = document.createElement('div');
+  bar.id = 'currencyBar';
+  bar.setAttribute('style', 'position:fixed;bottom:0;left:0;right:0;z-index:150;background:#0E0E12;border-top:1px solid #1e1e26;');
+
+  const tab = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;padding:10px 20px;cursor:pointer;user-select:none;max-width:760px;margin:0 auto;' });
+  const tabLeft = el('div', { style: 'display:flex;align-items:center;gap:8px' });
+  tabLeft.appendChild(el('span', { style: 'font-size:16px' }, '💱'));
+  tabLeft.appendChild(el('span', { style: 'font-size:13px;font-weight:600;color:#aaa' }, 'Currency Converter'));
+  const tabChev = el('span', { style: 'color:#444;font-size:11px' }, isOpen ? '▼' : '▲');
+  tab.appendChild(tabLeft);
+  tab.appendChild(tabChev);
+  tab.addEventListener('click', () => {
+    state.openPanels[barKey] = !isOpen;
+    render();
+  });
+  bar.appendChild(tab);
+
+  if (isOpen) {
+    const content = el('div', { style: 'padding:0 20px 16px;max-width:760px;margin:0 auto;' });
+
+    // Build target currency options (everything except EUR)
+    const targetCurrencies = [
+      { code: 'USD', symbol: '$',  name: 'US Dollar',       rate: 1.09 },
+      { code: 'GBP', symbol: '£',  name: 'British Pound',   rate: 0.86 },
+      { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', rate: 1.48 },
+      { code: 'JPY', symbol: '¥',  name: 'Japanese Yen',    rate: 162.5 },
+    ];
+
+    if (!currencyState.selectedCode) currencyState.selectedCode = 'USD';
+
+    const row = el('div', { style: 'display:flex;align-items:center;gap:10px' });
+
+    // EUR input
+    const eurWrap = el('div', { style: 'display:flex;align-items:center;gap:6px;flex:1;background:#111;border:1px solid #2a2a35;border-radius:8px;padding:8px 12px' });
+    eurWrap.appendChild(el('span', { style: 'color:#666;font-size:14px;font-weight:700;flex-shrink:0' }, '€'));
+    const eurInput = document.createElement('input');
+    eurInput.type = 'number';
+    eurInput.placeholder = '0.00';
+    eurInput.value = currencyState.eurValue;
+    eurInput.setAttribute('inputmode', 'decimal');
+    eurInput.setAttribute('style', 'background:none;border:none;color:#fff;font-size:16px;font-weight:600;outline:none;width:100%;-webkit-appearance:none;');
+    eurInput.addEventListener('input', () => {
+      currencyState.eurValue = eurInput.value;
+      convert();
+    });
+    eurWrap.appendChild(eurInput);
+    row.appendChild(eurWrap);
+
+    // Target currency dropdown
+    const select = document.createElement('select');
+    select.className = 'form-select';
+    select.setAttribute('style', 'flex:1;max-width:160px');
+    targetCurrencies.forEach(opt => {
+      const o = el('option', { value: opt.code }, `${opt.symbol} ${opt.name}`);
+      if (opt.code === currencyState.selectedCode) o.selected = true;
+      select.appendChild(o);
+    });
+    select.addEventListener('change', () => {
+      currencyState.selectedCode = select.value;
+      convert();
+    });
+    row.appendChild(select);
+    content.appendChild(row);
+
+    // Result
+    const result = el('div', { style: 'margin-top:10px;text-align:center;font-size:26px;font-weight:700;color:#E8624A;min-height:36px;letter-spacing:-0.5px' }, '');
+    const rateNote = el('div', { style: 'text-align:center;font-size:11px;color:#444;margin-top:2px' }, '');
+    content.appendChild(result);
+    content.appendChild(rateNote);
+
+    function convert() {
+      const eur = parseFloat(eurInput.value);
+      const code = select.value;
+      const cur = targetCurrencies.find(o => o.code === code);
+      if (!cur || isNaN(eur) || eurInput.value === '') {
+        result.textContent = '';
+        rateNote.textContent = '';
+        return;
+      }
+      const converted = (eur * cur.rate).toFixed(2);
+      result.textContent = `${cur.symbol}${converted} ${cur.code}`;
+      rateNote.textContent = `1 EUR = ${cur.rate} ${cur.code} · Approximate rate`;
+    }
+
+    if (currencyState.eurValue) convert();
+
+    bar.appendChild(content);
+  }
+
+  document.body.appendChild(bar);
+}
+
+// ── Render ──
+function render() {
+  try {
+    // Remove currency bar on every render — it re-renders itself
+    const existingBar = document.getElementById('currencyBar');
+    if (existingBar) existingBar.remove();
+
+    if (!authState.viewed) { renderPasswordScreen('view'); return; }
+    const app = document.getElementById('app');
+    while (app.firstChild) app.removeChild(app.firstChild);
+    app.appendChild(renderApp());
+  } catch(e) {
+    console.error('Render error:', e);
+  }
+}
+
+function renderApp() {
+  const { data, activeCityId, editingTitle } = state;
+  const city = data.cities.find(c => c.id === activeCityId);
+  const frag = document.createDocumentFragment();
+
+  // Header
+  const header = el('div', { className: 'header' });
+  if (editingTitle && authState.editing) {
+    const inp = el('input', { className: 'title-input', value: data.title });
+    inp.addEventListener('input', e => { data.title = e.target.value; save(); });
+    inp.addEventListener('blur', () => { state.editingTitle = false; render(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { state.editingTitle = false; render(); } });
+    header.appendChild(inp);
+    setTimeout(() => inp.focus(), 10);
+  } else {
+    const h1 = el('h1', {}, data.title);
+    if (authState.editing) {
+      const editSpan = el('span', {}, '✏️');
+      h1.appendChild(editSpan);
+      h1.addEventListener('click', () => { state.editingTitle = true; render(); });
+    }
+    header.appendChild(h1);
+  }
+
+  // Lock/unlock button
+  const lockBtn = el('button', { style: `background:none;border:1px solid ${authState.editing ? '#7AC67A' : '#333'};border-radius:8px;color:${authState.editing ? '#7AC67A' : '#555'};padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:10px` },
+    authState.editing ? '✏️ Editing' : '🔒 View Only');
+  lockBtn.addEventListener('click', () => {
+    if (authState.editing) {
+      authState.editing = false;
+      try { sessionStorage.removeItem('hm_editing'); } catch(e) {}
+      render();
+    } else {
+      renderPasswordScreen('edit');
+    }
+  });
+  header.appendChild(lockBtn);
+  frag.appendChild(header);
+
+  // Tabs
+  const tabs = el('div', { className: 'tabs' });
+  data.cities.forEach(c => {
+    const btn = el('button', { className: 'tab-btn' + (c.id === activeCityId ? ' active' : ''), style: `--c:${c.color}` }, c.name);
+    btn.addEventListener('click', () => { state.activeCityId = c.id; render(); });
+    tabs.appendChild(btn);
+  });
+  if (authState.editing) {
+    const addTab = el('button', { className: 'tab-add' }, '＋');
+    addTab.addEventListener('click', () => openModal('addCity'));
+    tabs.appendChild(addTab);
+  }
+  frag.appendChild(tabs);
+
+  // Main
+  const main = el('div', { className: 'main' });
+  if (!city) {
+    const empty = el('div', { className: 'empty-city' });
+    const emojiDiv = el('div', { style: 'font-size:44px;margin-bottom:12px' }, '🌍');
+    const titleDiv = el('div', { style: 'font-size:17px;margin-bottom:8px' }, 'No cities yet');
+    const subDiv = el('div', { style: 'font-size:13px;margin-bottom:20px;color:#555' }, 'Add a city to get started');
+    empty.appendChild(emojiDiv);
+    empty.appendChild(titleDiv);
+    empty.appendChild(subDiv);
+    const btn = makeBtn('Add First City', '#E8624A');
+    btn.addEventListener('click', () => openModal('addCity'));
+    empty.appendChild(btn);
+    main.appendChild(empty);
+  } else {
+    main.appendChild(renderCity(city));
+  }
+  frag.appendChild(main);
+
+  // Currency bar renders directly to body (fixed positioning)
+  renderCurrencyBar(city);
+
+  if (state.modal) frag.appendChild(renderModal());
+
+  return frag;
+}
+
+function renderCity(city) {
+  const frag = document.createDocumentFragment();
+
+  const cityHeader = el('div', { className: 'city-header' });
+  const cityLeft = el('div', { className: 'city-title' });
+  cityLeft.appendChild(el('div', { className: 'city-dot', style: `background:${city.color}` }));
+  cityLeft.appendChild(el('div', { className: 'city-name' }, city.name));
+  if (authState.editing) {
+    const editCityBtn = el('button', { className: 'icon-btn' }, '✏️');
+    editCityBtn.addEventListener('click', () => openModal('editCity', { city }));
+    const delCityBtn = el('button', { className: 'icon-btn' }, '🗑');
+    delCityBtn.addEventListener('click', () => {
+      if (!confirm(`Remove ${city.name}?`)) return;
+      state.data.cities = state.data.cities.filter(c => c.id !== city.id);
+      state.activeCityId = state.data.cities[0]?.id || null;
+      save(); render();
+    });
+    cityLeft.appendChild(editCityBtn);
+    cityLeft.appendChild(delCityBtn);
+  }
+  cityHeader.appendChild(cityLeft);
+  if (authState.editing) {
+    const addDayBtn = makeBtn('+ Add Day', city.color);
+    addDayBtn.addEventListener('click', () => openModal('addDay', { cityId: city.id }));
+    cityHeader.appendChild(addDayBtn);
+  }
+  frag.appendChild(cityHeader);
+
+  frag.appendChild(renderTransportPanel(city));
+  frag.appendChild(renderAccomPanel(city));
+
+  if (city.days.length === 0) {
+    const emptyDays = el('div', { className: 'empty-days' });
+    emptyDays.appendChild(el('div', { className: 'empty-icon' }, '📅'));
+    emptyDays.appendChild(el('div', { style: 'margin-bottom:14px' }, 'No days planned yet'));
+    if (authState.editing) {
+      const btn = makeBtn('Add First Day', city.color, true);
+      btn.addEventListener('click', () => openModal('addDay', { cityId: city.id }));
+      emptyDays.appendChild(btn);
+    }
+    frag.appendChild(emptyDays);
+  } else {
+    city.days.forEach((day, di) => frag.appendChild(renderDay(city, day, di)));
+  }
+
+  frag.appendChild(renderThingsToDoPanel(city));
+
+  return frag;
+}
+
+function renderThingsToDoPanel(city) {
+  if (!city.thingsToDo) city.thingsToDo = { eat: [], see: [], buy: [] };
+  const panelKey = city.id + '_thingstodo';
+  const categories = [
+    { key: 'eat', label: '🍽 Things to Eat', color: '#E8624A' },
+    { key: 'see', label: '👀 Things to See', color: '#4A90E2' },
+    { key: 'buy', label: '🛍 Things to Buy', color: '#7AC67A' },
+  ];
+
+  const panel = el('div', { className: 'panel', style: `--pc:${city.color};margin-top:24px;border-color:${city.color}` });
+  const header = el('div', { className: 'panel-header' });
+  const titleDiv = el('div', { className: 'panel-title filled' });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, '📋'));
+  titleDiv.appendChild(el('span', {}, 'Things To Do'));
+  header.appendChild(titleDiv);
+  const chev = el('span', { className: 'panel-chevron' }, state.openPanels[panelKey] ? '▲' : '▼');
+  header.appendChild(chev);
+  header.addEventListener('click', () => {
+    state.openPanels[panelKey] = !state.openPanels[panelKey];
+    render();
+  });
+  panel.appendChild(header);
+
+  if (state.openPanels[panelKey]) {
+    const body = el('div', { className: 'panel-body' });
+
+    categories.forEach(cat => {
+      const catKey = city.id + '_ttd_' + cat.key;
+      const items = city.thingsToDo[cat.key] || [];
+
+      const catWrap = el('div', { style: 'margin-top:14px' });
+
+      // Category header
+      const catHeader = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px' });
+      const catLeft = el('div', { style: 'display:flex;align-items:center;gap:8px' });
+      const catChev = el('span', { style: 'color:#444;font-size:10px;cursor:pointer' }, state.openPanels[catKey] ? '▲' : '▼');
+      const catLabel = el('div', { style: `font-size:13px;font-weight:700;color:${cat.color};cursor:pointer` }, cat.label);
+      catLeft.appendChild(catChev);
+      catLeft.appendChild(catLabel);
+      catHeader.appendChild(catLeft);
+
+      if (authState.editing) {
+        const addBtn = el('button', { style: `background:none;border:1px solid #2a2a35;border-radius:6px;color:${cat.color};font-size:11px;font-weight:600;padding:3px 10px;cursor:pointer` }, '+ Add');
+        addBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          openModal('editThingToDo', { cityId: city.id, category: cat.key, catLabel: cat.label });
+        });
+        catHeader.appendChild(addBtn);
+      }
+
+      const toggleCat = () => {
+        state.openPanels[catKey] = !state.openPanels[catKey];
+        render();
+      };
+      catHeader.addEventListener('click', toggleCat);
+      catWrap.appendChild(catHeader);
+
+      if (state.openPanels[catKey]) {
+        if (items.length === 0) {
+          catWrap.appendChild(el('div', { style: 'color:#444;font-size:13px;font-style:italic;padding:8px 0' }, authState.editing ? 'None yet — tap + Add' : 'Nothing added yet.'));
+        } else {
+          items.forEach((item, idx) => {
+            const itemEl = el('div', { style: `background:#0a0a0e;border:1px solid #1e1e26;border-radius:8px;padding:10px 12px;margin-bottom:6px` });
+            const itemTop = el('div', { style: 'display:flex;align-items:flex-start;justify-content:space-between;gap:8px' });
+            const itemInfo = el('div', { style: 'flex:1;min-width:0' });
+            itemInfo.appendChild(el('div', { style: 'color:#eee;font-weight:600;font-size:13px' }, item.name));
+            if (item.notes) itemInfo.appendChild(el('div', { style: 'color:#666;font-size:12px;margin-top:2px' }, item.notes));
+            itemTop.appendChild(itemInfo);
+
+            if (authState.editing) {
+              const itemBtns = el('div', { style: 'display:flex;gap:4px;flex-shrink:0' });
+              const editItemBtn = el('button', { className: 'icon-btn' }, '✏️');
+              editItemBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                openModal('editThingToDo', { cityId: city.id, category: cat.key, catLabel: cat.label, item, idx });
+              });
+              itemBtns.appendChild(editItemBtn);
+              itemTop.appendChild(itemBtns);
+            }
+            itemEl.appendChild(itemTop);
+
+            // Address with map buttons
+            if (item.address) {
+              const addrWrap = el('div', { style: 'margin-top:6px' });
+              addrWrap.appendChild(el('div', { style: 'font-size:11px;color:#555;margin-bottom:3px' }, item.address));
+              const mapBtns = el('div', { style: 'display:flex;gap:5px;flex-wrap:wrap' });
+              const encoded = encodeURIComponent(item.address);
+              [
+                { label: '🗺 Google', href: `https://www.google.com/maps/dir/?api=1&destination=${encoded}` },
+                { label: '🍎 Apple',  href: `http://maps.apple.com/?daddr=${encoded}` },
+                { label: '🔵 Waze',   href: `https://waze.com/ul?q=${encoded}&navigate=yes` },
+              ].forEach(m => {
+                const btn = document.createElement('a');
+                btn.setAttribute('href', m.href);
+                btn.setAttribute('target', '_blank');
+                btn.setAttribute('rel', 'noopener noreferrer');
+                btn.setAttribute('style', 'font-size:10px;font-weight:600;padding:3px 8px;border-radius:5px;background:#1e1e28;border:1px solid #333;color:#aaa;text-decoration:none;white-space:nowrap;display:inline-block;');
+                btn.textContent = m.label;
+                mapBtns.appendChild(btn);
+              });
+              addrWrap.appendChild(mapBtns);
+              itemEl.appendChild(addrWrap);
+            }
+
+            catWrap.appendChild(itemEl);
+          });
+        }
+      }
+
+      body.appendChild(catWrap);
+    });
+
+    panel.appendChild(body);
+  }
+  return panel;
+}
+
+function renderTransportPanel(city) {
+  const t = city.transport || {};
+  const filled = !!(t.departure || t.arrival || t.operator || t.notes);
+  const icon = t.type === 'Train' ? '🚆' : t.type === 'Bus' ? '🚌' : t.type === 'Ferry' ? '⛴️' : '✈️';
+  const panelKey = city.id + '_transport';
+
+  const panel = el('div', { className: 'panel' + (filled ? ' filled' : ''), style: `--pc:${city.color}` });
+  const header = el('div', { className: 'panel-header' });
+
+  const titleDiv = el('div', { className: 'panel-title ' + (filled ? 'filled' : 'empty') });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, icon));
+  titleDiv.appendChild(el('span', {}, `Getting to ${city.name}`));
+  if (!filled) titleDiv.appendChild(el('span', { className: 'panel-hint' }, '— tap to add'));
+  header.appendChild(titleDiv);
+
+  const actions = el('div', { className: 'panel-actions' });
+  if (authState.editing) {
+    const editBtn = el('button', { className: 'panel-edit' }, '✏️ Edit');
+    editBtn.addEventListener('click', e => { e.stopPropagation(); openModal('editTransport', { cityId: city.id }); });
+    actions.appendChild(editBtn);
+  }
+  const chev = el('span', { className: 'panel-chevron' }, state.openPanels[panelKey] ? '▲' : '▼');
+  actions.appendChild(chev);
+  header.appendChild(actions);
+
+  header.addEventListener('click', () => {
+    state.openPanels[panelKey] = !state.openPanels[panelKey];
+    render();
+  });
+  panel.appendChild(header);
+
+  if (state.openPanels[panelKey]) {
+    const body = el('div', { className: 'panel-body' });
+    const grid = el('div', { className: 'info-grid' });
+    appendInfoField(grid, 'Type', t.type);
+    appendInfoField(grid, 'Operator / Airline', t.operator);
+    appendInfoField(grid, 'Flight / Train #', t.flightNumber, true);
+    appendInfoField(grid, 'Confirmation #', t.confirmation, true);
+    appendInfoField(grid, 'From', t.departure);
+    appendInfoField(grid, 'To', t.arrival);
+    appendInfoField(grid, 'Departure', t.departureTime);
+    appendInfoField(grid, 'Arrival', t.arrivalTime);
+    body.appendChild(grid);
+    if (t.notes) appendInfoField(body, 'Notes', t.notes);
+    panel.appendChild(body);
+  }
+  return panel;
+}
+
+function renderAccomPanel(city) {
+  const a = city.accommodation || {};
+  const filled = !!(a.name || a.address || a.doorCode);
+  const panelKey = city.id + '_accom';
+
+  const panel = el('div', { className: 'panel' + (filled ? ' filled' : ''), style: `--pc:${city.color}` });
+  const header = el('div', { className: 'panel-header' });
+
+  const titleDiv = el('div', { className: 'panel-title ' + (filled ? 'filled' : 'empty') });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, '🏨'));
+  titleDiv.appendChild(el('span', {}, `Accommodation in ${city.name}`));
+  if (!filled) titleDiv.appendChild(el('span', { className: 'panel-hint' }, '— tap to add'));
+  header.appendChild(titleDiv);
+
+  const accomActions = el('div', { className: 'panel-actions' });
+  if (authState.editing) {
+    const accomEditBtn = el('button', { className: 'panel-edit' }, '✏️ Edit');
+    accomEditBtn.addEventListener('click', e => { e.stopPropagation(); openModal('editAccom', { cityId: city.id }); });
+    accomActions.appendChild(accomEditBtn);
+  }
+  const accomChev = el('span', { className: 'panel-chevron' }, state.openPanels[panelKey] ? '▲' : '▼');
+  accomActions.appendChild(accomChev);
+  header.appendChild(accomActions);
+
+  header.addEventListener('click', () => {
+    state.openPanels[panelKey] = !state.openPanels[panelKey];
+    render();
+  });
+  panel.appendChild(header);
+
+  if (state.openPanels[panelKey]) {
+    const body = el('div', { className: 'panel-body' });
+    const grid = el('div', { className: 'info-grid' });
+    appendInfoField(grid, 'Name / Property', a.name);
+    appendInfoField(grid, 'Confirmation #', a.confirmationNumber, true);
+
+    if (a.address) {
+      const field = el('div', { className: 'info-field' });
+      field.appendChild(el('div', { className: 'info-label' }, 'Address'));
+      field.appendChild(el('div', { style: 'font-size:14px;color:#ddd;margin-bottom:6px' }, a.address));
+      const mapBtns = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
+      const encoded = encodeURIComponent(a.address);
+      const maps = [
+        { label: '🗺 Google', href: `https://www.google.com/maps/dir/?api=1&destination=${encoded}` },
+        { label: '🍎 Apple', href: `http://maps.apple.com/?daddr=${encoded}` },
+        { label: '🔵 Waze', href: `https://waze.com/ul?q=${encoded}&navigate=yes` },
+      ];
+      maps.forEach(m => {
+        const btn = document.createElement('a');
+        btn.setAttribute('href', m.href);
+        btn.setAttribute('target', '_blank');
+        btn.setAttribute('rel', 'noopener noreferrer');
+        btn.setAttribute('style', 'font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#1e1e28;border:1px solid #333;color:#aaa;text-decoration:none;white-space:nowrap;display:inline-block;');
+        btn.textContent = m.label;
+        mapBtns.appendChild(btn);
+      });
+      field.appendChild(mapBtns);
+      grid.appendChild(field);
+    }
+
+    appendInfoField(grid, 'Check-in', a.checkIn);
+    appendInfoField(grid, 'Door / Key Code', a.doorCode, true);
+    appendInfoField(grid, 'Check-out', a.checkOut);
+    appendInfoField(grid, 'Wi-Fi Name', a.wifiName, true);
+    appendInfoField(grid, 'Wi-Fi Password', a.wifiPassword, true);
+    body.appendChild(grid);
+    if (a.notes) appendInfoField(body, 'Notes', a.notes);
+
+    // Other Info expandable section — always visible
+    const otherKey = city.id + '_otherinfo';
+    const otherWrap = el('div', { style: 'margin-top:12px;border-top:1px solid #1e1e26;padding-top:10px' });
+    const otherHeader = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;padding:2px 0' });
+    const otherLabel = el('div', { style: 'font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#666;font-weight:600' }, 'Other Info');
+    const otherChev = el('span', { style: 'color:#444;font-size:11px' }, state.openPanels[otherKey] ? '▲' : '▼');
+    otherHeader.appendChild(otherLabel);
+    otherHeader.appendChild(otherChev);
+    otherHeader.addEventListener('click', () => {
+      state.openPanels[otherKey] = !state.openPanels[otherKey];
+      render();
+    });
+    otherWrap.appendChild(otherHeader);
+    if (state.openPanels[otherKey]) {
+      if (a.otherInfo) {
+        const otherBody = el('div', { style: 'margin-top:8px;color:#bbb;font-size:13px;line-height:1.6;white-space:pre-wrap' }, a.otherInfo);
+        otherWrap.appendChild(otherBody);
+      } else {
+        const empty = el('div', { style: 'margin-top:8px;color:#444;font-size:13px;font-style:italic' }, authState.editing ? 'No additional info — tap ✏️ Edit to add some.' : 'No additional info.');
+        otherWrap.appendChild(empty);
+      }
+    }
+    body.appendChild(otherWrap);
+
+    panel.appendChild(body);
+  }
+  return panel;
+}
+
+function renderDay(city, day, di) {
+  const block = el('div', { className: 'day-block' });
+
+  // Top row: badge + date + buttons
+  const header = el('div', { className: 'day-header' });
+  const left = el('div', { className: 'day-left' });
+
+  const badge = el('div', { className: 'day-badge', style: `background:${city.color}` }, `Day ${di + 1}`);
+  left.appendChild(badge);
+
+  const dateInp = el('input', { type: 'date', className: 'day-date-input', value: day.date, autocomplete: 'off' });
+  dateInp.addEventListener('change', e => {
+    day.date = e.target.value;
+    city.days.sort((a,b) => a.date.localeCompare(b.date));
+    save(); render();
+  });
+  left.appendChild(dateInp);
+  header.appendChild(left);
+
+  const right = el('div', { className: 'day-right' });
+  if (authState.editing) {
+    const addActBtn = makeBtn('+ Activity', city.color, true);
+    addActBtn.classList.add('btn-secondary');
+    addActBtn.style.background = 'transparent';
+    addActBtn.style.color = '#aaa';
+    addActBtn.style.border = '1px solid #333';
+    addActBtn.addEventListener('click', () => openModal('editActivity', { cityId: city.id, dayId: day.id }));
+    right.appendChild(addActBtn);
+
+    const dayEditBtn = el('button', { className: 'icon-btn' }, '✏️');
+    dayEditBtn.addEventListener('click', () => openModal('editDay', { cityId: city.id, dayId: day.id }));
+    right.appendChild(dayEditBtn);
+  }
+  header.appendChild(right);
+  block.appendChild(header);
+
+  if (day.activities.length === 0) {
+    const empty = el('div', { className: 'empty-acts' });
+    if (authState.editing) {
+      empty.innerHTML = 'No activities yet — ';
+      const addLink = el('span', { className: 'empty-link', style: `color:${city.color}` }, 'add one');
+      addLink.addEventListener('click', () => openModal('editActivity', { cityId: city.id, dayId: day.id }));
+      empty.appendChild(addLink);
+    } else {
+      empty.textContent = 'No activities yet.';
+    }
+    block.appendChild(empty);
+  } else {
+    day.activities.forEach(act => block.appendChild(renderActivity(city, day, act)));
+  }
+
+  return block;
+}
+
+function renderActivity(city, day, act) {
+  const panelKey = act.id + '_open';
+  const isOpen = !!state.openPanels[panelKey];
+  const hasDetails = !!(act.notes || act.link || act.address || (act.files && act.files.length));
+  const canExpand = hasDetails || authState.editing;
+
+  const wrapper = el('div', { style: 'margin-bottom:7px' });
+
+  const row = el('div', { className: 'activity', draggable: 'true', style: 'margin-bottom:0;border-radius:' + (isOpen && canExpand ? '10px 10px 0 0' : '10px') });
+  row.style.borderColor = '#222';
+
+  row.addEventListener('mouseenter', () => row.style.borderColor = city.color);
+  row.addEventListener('mouseleave', () => { if (!isOpen) row.style.borderColor = '#222'; });
+  row.addEventListener('touchstart', () => {}, { passive: true });
+
+  row.addEventListener('dragstart', e => {
+    state.dragSrc = { cityId: city.id, dayId: day.id, actId: act.id };
+    row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  row.addEventListener('dragend', () => row.classList.remove('dragging'));
+  row.addEventListener('dragover', e => { e.preventDefault(); row.classList.add('drag-over'); });
+  row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+  row.addEventListener('drop', e => {
+    e.preventDefault();
+    row.classList.remove('drag-over');
+    const src = state.dragSrc;
+    if (!src || src.actId === act.id || src.dayId !== day.id) return;
+    const acts = day.activities;
+    const fromIdx = acts.findIndex(a => a.id === src.actId);
+    const toIdx = acts.findIndex(a => a.id === act.id);
+    const [moved] = acts.splice(fromIdx, 1);
+    acts.splice(toIdx, 0, moved);
+    state.dragSrc = null;
+    save(); render();
+  });
+
+  row.appendChild(el('div', { className: 'activity-drag' }, '⠿'));
+
+  // Time display — show start + end time if duration set
+  const timeDiv = el('div', { className: 'activity-time', style: `color:${city.color}` });
+  if (act.time && act.duration) {
+    const endTime = calcActivityEndTime(act.time, act.duration);
+    if (endTime) {
+      timeDiv.appendChild(el('div', {}, act.time));
+      const endDiv = el('div', { style: 'font-size:10px;opacity:0.75;margin-top:1px' }, `→ ${endTime}`);
+      timeDiv.appendChild(endDiv);
+    } else {
+      timeDiv.textContent = act.time || '–';
+    }
+  } else {
+    timeDiv.textContent = act.time || '–';
+  }
+  row.appendChild(timeDiv);
+
+  const body = el('div', { className: 'activity-body' });
+  body.appendChild(el('div', { className: 'activity-title' }, act.title));
+  row.appendChild(body);
+
+  const rightSide = el('div', { style: 'display:flex;align-items:center;gap:4px;flex-shrink:0' });
+
+  if (authState.editing) {
+    const editBtn = el('button', { className: 'icon-btn' }, '✏️');
+    editBtn.addEventListener('click', e => { e.stopPropagation(); openModal('editActivity', { cityId: city.id, dayId: day.id, activity: act }); });
+    rightSide.appendChild(editBtn);
+  }
+
+  if (canExpand) {
+    const chev = el('span', { style: 'color:#555;font-size:11px;padding:2px 4px;cursor:pointer' }, isOpen ? '▲' : '▼');
+    chev.addEventListener('click', e => {
+      e.stopPropagation();
+      state.openPanels[panelKey] = !isOpen;
+      render();
+    });
+    rightSide.appendChild(chev);
+  }
+  row.appendChild(rightSide);
+
+  if (canExpand) {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => {
+      state.openPanels[panelKey] = !isOpen;
+      render();
+    });
+  }
+
+  wrapper.appendChild(row);
+
+  if (isOpen && canExpand) {
+    const details = el('div', { style: `background:#111;border:1px solid ${city.color}55;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px` });
+    if (act.address) {
+      const addrLabel = el('div', { style: 'font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#666;margin-bottom:4px' }, 'Address');
+      details.appendChild(addrLabel);
+
+      const allAddresses = [
+        { label: act.addressLabel || null, addr: act.address },
+        ...((act.extraAddresses || []))
+      ];
+
+      allAddresses.forEach(({ label: addrName, addr }) => {
+        const addrWrap = el('div', { style: 'margin-bottom:8px' });
+        if (addrName) addrWrap.appendChild(el('div', { style: 'font-size:11px;color:#666;margin-bottom:2px' }, addrName));
+        addrWrap.appendChild(el('div', { style: 'font-size:13px;color:#ddd;margin-bottom:4px' }, addr));
+        const mapBtns = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
+        const encoded = encodeURIComponent(addr);
+        [
+          { label: '🗺 Google', href: `https://www.google.com/maps/dir/?api=1&destination=${encoded}` },
+          { label: '🍎 Apple',  href: `http://maps.apple.com/?daddr=${encoded}` },
+          { label: '🔵 Waze',   href: `https://waze.com/ul?q=${encoded}&navigate=yes` },
+        ].forEach(m => {
+          const btn = document.createElement('a');
+          btn.setAttribute('href', m.href);
+          btn.setAttribute('target', '_blank');
+          btn.setAttribute('rel', 'noopener noreferrer');
+          btn.setAttribute('style', 'font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#1e1e28;border:1px solid #333;color:#aaa;text-decoration:none;white-space:nowrap;display:inline-block;');
+          btn.textContent = m.label;
+          mapBtns.appendChild(btn);
+        });
+        addrWrap.appendChild(mapBtns);
+        details.appendChild(addrWrap);
+      });
+    }
+    if (act.notes) {
+      const notesEl = el('div', { style: 'color:#bbb;font-size:13px;line-height:1.6;white-space:pre-wrap' }, act.notes);
+      details.appendChild(notesEl);
+    }
+    if (act.link) {
+      const link = document.createElement('a');
+      link.setAttribute('href', act.link);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      link.setAttribute('style', `color:${city.color};margin-top:6px;display:block;font-size:12px;text-decoration:none`);
+      link.textContent = '🔗 ' + act.link.replace(/^https?:\/\//, '').slice(0, 50);
+      details.appendChild(link);
+    }
+    // Attachments
+    if (act.files && act.files.length > 0) {
+      const attLabel = el('div', { style: 'font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#666;margin-bottom:6px;margin-top:8px' }, 'Attachments');
+      details.appendChild(attLabel);
+      const attRow = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px' });
+      act.files.forEach(f => {
+        const thumb = el('div', { style: 'cursor:pointer;position:relative' });
+
+        if (f.type && f.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.setAttribute('style', 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #333;display:block');
+          img.src = f.data;
+          thumb.appendChild(img);
+          thumb.addEventListener('click', () => openFileViewer(f));
+        } else {
+          thumb.setAttribute('style', 'cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;width:70px;height:70px;border-radius:8px;border:1px solid #333;background:#1e1e28;gap:4px');
+          const icon = el('div', {}, '📄');
+          icon.style.fontSize = '24px';
+          const label = el('div', {}, (f.name || 'file').slice(0, 12));
+          label.style.cssText = 'font-size:9px;color:#888;text-align:center;word-break:break-all;padding:0 4px';
+          thumb.appendChild(icon);
+          thumb.appendChild(label);
+          thumb.addEventListener('click', () => openFileViewer(f));
+        }
+        attRow.appendChild(thumb);
+      });
+      details.appendChild(attRow);
+    }
+    // Delete only shown in edit mode
+    if (authState.editing) {
+      const delRow = el('div', { style: 'margin-top:10px;padding-top:8px;border-top:1px solid #1e1e26;display:flex;justify-content:flex-end' });
+      const delBtn = el('button', { style: 'background:none;border:1px solid #3a1a1a;border-radius:6px;color:#884444;font-size:12px;padding:5px 12px;cursor:pointer;' }, '🗑 Delete');
+      let confirmPending = false;
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!confirmPending) {
+          confirmPending = true;
+          delBtn.textContent = 'Tap again to confirm';
+          delBtn.style.background = '#3a1a1a';
+          delBtn.style.color = '#cc5555';
+          delBtn.style.borderColor = '#cc5555';
+          setTimeout(() => {
+            confirmPending = false;
+            if (delBtn.isConnected) {
+              delBtn.textContent = '🗑 Delete';
+              delBtn.style.background = 'none';
+              delBtn.style.color = '#884444';
+              delBtn.style.borderColor = '#3a1a1a';
+            }
+          }, 3000);
+        } else {
+          day.activities = day.activities.filter(a => a.id !== act.id);
+          save(); render();
+        }
+      });
+      delRow.appendChild(delBtn);
+      details.appendChild(delRow);
+    }
+    wrapper.appendChild(details);
+  }
+
+  return wrapper;
+}
+
+// ── Modals ──
+function openModal(type, payload = {}) {
+  state.modal = { type, payload };
+  render();
+}
+
+function closeModal() {
+  state.modal = null;
+  render();
+}
+
+function renderModal() {
+  const { type, payload } = state.modal;
+  const overlay = el('div', { className: 'modal-overlay' });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  const modal = el('div', { className: 'modal' });
+
+  if (type === 'addCity') modal.appendChild(renderAddCityModal());
+  else if (type === 'editCity') modal.appendChild(renderEditCityModal(payload.city));
+  else if (type === 'addDay') modal.appendChild(renderAddDayModal(payload.cityId));
+  else if (type === 'editDay') modal.appendChild(renderEditDayModal(payload.cityId, payload.dayId));
+  else if (type === 'editActivity') modal.appendChild(renderActivityModal(payload));
+  else if (type === 'editTransport') modal.appendChild(renderTransportModal(payload.cityId));
+  else if (type === 'editAccom') modal.appendChild(renderAccomModal(payload.cityId));
+  else if (type === 'editThingToDo') modal.appendChild(renderThingToDoModal(payload));
+
+  overlay.appendChild(modal);
+  return overlay;
+}
+
+function renderAddCityModal() {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Add City'));
+  let name = '', color = COLORS[state.data.cities.length % COLORS.length];
+
+  const nameGroup = formGroup('City Name');
+  const nameInp = formInput('text', '', 'e.g. Tokyo, Venice…');
+  nameInp.addEventListener('input', e => { name = e.target.value; });
+  nameGroup.appendChild(nameInp);
+  frag.appendChild(nameGroup);
+
+  const colorGroup = formGroup('Color');
+  const picker = el('div', { className: 'color-picker' });
+  COLORS.forEach(c => {
+    const swatch = el('div', { className: 'color-swatch' + (c === color ? ' selected' : ''), style: `background:${c}` });
+    swatch.addEventListener('click', () => {
+      color = c;
+      picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+    });
+    picker.appendChild(swatch);
+  });
+  colorGroup.appendChild(picker);
+  frag.appendChild(colorGroup);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const add = makeBtn('Add City', color);
+  add.addEventListener('click', () => {
+    if (!name.trim()) return;
+    const newCity = { id: genId(), name: name.trim(), color,
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:'Flight', operator:'', flightNumber:'', departure:'', arrival:'', departureTime:'', arrivalTime:'', confirmation:'', notes:'' },
+      accommodation: { name:'', address:'', doorCode:'', checkIn:'', checkOut:'', confirmationNumber:'', wifiName:'', wifiPassword:'', notes:'' },
+      days: [] };
+    state.data.cities.push(newCity);
+    state.activeCityId = newCity.id;
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(add);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderEditCityModal(city) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Edit City'));
+  let name = city.name, color = city.color;
+
+  const nameGroup = formGroup('City Name');
+  const nameInp = formInput('text', city.name, 'City name');
+  nameInp.addEventListener('input', e => { name = e.target.value; });
+  nameGroup.appendChild(nameInp);
+  frag.appendChild(nameGroup);
+
+  const colorGroup = formGroup('Color');
+  const picker = el('div', { className: 'color-picker' });
+  COLORS.forEach(c => {
+    const swatch = el('div', { className: 'color-swatch' + (c === color ? ' selected' : ''), style: `background:${c}` });
+    swatch.addEventListener('click', () => {
+      color = c;
+      picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+    });
+    picker.appendChild(swatch);
+  });
+  colorGroup.appendChild(picker);
+  frag.appendChild(colorGroup);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', color);
+  save_.addEventListener('click', () => {
+    city.name = name.trim() || city.name;
+    city.color = color;
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  if (!city.thingsToDo) city.thingsToDo = { eat: [], see: [], buy: [] };
+  const editing = item !== undefined;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, editing ? `✏️ Edit — ${catLabel}` : `+ Add — ${catLabel}`));
+
+  let form = editing ? { ...item } : { name: '', notes: '', address: '' };
+
+  const ng = formGroup('Name');
+  const ni = formInput('text', form.name || '', 'e.g. Da Enzo al 29');
+  ni.addEventListener('input', e => { form.name = e.target.value; });
+  ng.appendChild(ni); frag.appendChild(ng);
+
+  const notg = formGroup('Notes (optional)');
+  const nota = el('textarea', { className: 'form-textarea', placeholder: 'Opening hours, price range, tips…' });
+  nota.value = form.notes || '';
+  nota.addEventListener('input', e => { form.notes = e.target.value; });
+  notg.appendChild(nota); frag.appendChild(notg);
+
+  const ag = formGroup('Address (optional — opens in maps)');
+  const ai = formInput('text', form.address || '', 'e.g. Via dei Vascellari, Rome');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  // Delete option if editing
+  if (editing) {
+    const delWrap = el('div', { style: 'margin-top:16px;padding-top:14px;border-top:1px solid #1e1e26' });
+    const delBtn = el('button', { style: 'width:100%;background:none;border:1px solid #3a1a1a;border-radius:8px;color:#884444;font-size:13px;padding:10px;cursor:pointer;' }, '🗑 Remove This Item');
+    let confirmPending = false;
+    delBtn.addEventListener('click', () => {
+      if (!confirmPending) {
+        confirmPending = true;
+        delBtn.textContent = 'Tap again to confirm';
+        delBtn.style.background = '#3a1a1a';
+        delBtn.style.color = '#cc5555';
+        delBtn.style.borderColor = '#cc5555';
+        setTimeout(() => {
+          confirmPending = false;
+          if (delBtn.isConnected) {
+            delBtn.textContent = '🗑 Remove This Item';
+            delBtn.style.background = 'none';
+            delBtn.style.color = '#884444';
+            delBtn.style.borderColor = '#3a1a1a';
+          }
+        }, 3000);
+      } else {
+        city.thingsToDo[category].splice(idx, 1);
+        save(); closeModal(); render();
+      }
+    });
+    delWrap.appendChild(delBtn);
+    frag.appendChild(delWrap);
+  }
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn(editing ? 'Save' : 'Add', city.color);
+  save_.addEventListener('click', () => {
+    if (!form.name.trim()) return;
+    if (editing) {
+      city.thingsToDo[category][idx] = { ...form };
+    } else {
+      city.thingsToDo[category].push({ ...form });
+    }
+    save(); closeModal(); render();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderEditDayModal(cityId, dayId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const day = city.days.find(d => d.id === dayId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '✏️ Edit Day'));
+
+  // Date field
+  const dg = formGroup('Date');
+  const di = formInput('date', day.date || '');
+  di.addEventListener('change', e => {
+    day.date = e.target.value;
+    city.days.sort((a,b) => a.date.localeCompare(b.date));
+    save();
+    // No render here — user is still in the modal
+  });
+  dg.appendChild(di);
+  frag.appendChild(dg);
+
+  // Delete day section
+  const delWrap = el('div', { style: 'margin-top:20px;padding-top:16px;border-top:1px solid #1e1e26' });
+  delWrap.appendChild(el('div', { style: 'font-size:12px;color:#555;margin-bottom:10px' }, 'Danger zone'));
+
+  const delBtn = el('button', { style: 'width:100%;background:none;border:1px solid #3a1a1a;border-radius:8px;color:#884444;font-size:14px;padding:12px;cursor:pointer;' }, '🗑 Remove This Day');
+  let confirmPending = false;
+  delBtn.addEventListener('click', () => {
+    if (!confirmPending) {
+      confirmPending = true;
+      delBtn.textContent = 'Tap again to confirm removal';
+      delBtn.style.background = '#3a1a1a';
+      delBtn.style.color = '#cc5555';
+      delBtn.style.borderColor = '#cc5555';
+      setTimeout(() => {
+        confirmPending = false;
+        if (delBtn.isConnected) {
+          delBtn.textContent = '🗑 Remove This Day';
+          delBtn.style.background = 'none';
+          delBtn.style.color = '#884444';
+          delBtn.style.borderColor = '#3a1a1a';
+        }
+      }, 3000);
+    } else {
+      city.days = city.days.filter(d => d.id !== dayId);
+      save(); closeModal(); render();
+    }
+  });
+  delWrap.appendChild(delBtn);
+  frag.appendChild(delWrap);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Done', null, false, 'secondary');
+  cancel.addEventListener('click', () => { closeModal(); save(); render(); });
+  footer.appendChild(cancel);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderAddDayModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Add Day'));
+  let date = '', label = '';
+
+  const dg = formGroup('Date');
+  const di = formInput('date', '');
+  di.addEventListener('change', e => { date = e.target.value; });
+  dg.appendChild(di);
+  frag.appendChild(dg);
+
+  const lg = formGroup('Label (optional)');
+  const li = formInput('text', '', 'e.g. Arrival, Beach Day…');
+  li.addEventListener('input', e => { label = e.target.value; });
+  lg.appendChild(li);
+  frag.appendChild(lg);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const add = makeBtn('Add Day', city.color);
+  add.addEventListener('click', () => {
+    if (!date) return;
+    city.days.push({ id: genId(), date, label, activities: [] });
+    city.days.sort((a,b) => a.date.localeCompare(b.date));
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(add);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderActivityModal({ cityId, dayId, activity }) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const day = city.days.find(d => d.id === dayId);
+  const editing = !!activity;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, editing ? 'Edit Activity' : 'Add Activity'));
+
+  let form = editing
+    ? { ...activity, duration: activity.duration || '', files: activity.files ? activity.files.map(f => ({...f})) : [] }
+    : { time: '', duration: '', title: '', address: '', notes: '', link: '', files: [] };
+
+  const grid = el('div', { className: 'grid-2' });
+
+  const tg = formGroup('Start Time (e.g. 2:30 PM)');
+  const ti = formInput('text', form.time || '', '2:30 PM');
+  ti.addEventListener('input', e => { form.time = e.target.value; updatePreview(); });
+  tg.appendChild(ti); grid.appendChild(tg);
+
+  const ttg = formGroup('Title');
+  const tti = formInput('text', form.title || '', 'e.g. Visit the Colosseum');
+  tti.addEventListener('input', e => { form.title = e.target.value; });
+  ttg.appendChild(tti); grid.appendChild(ttg);
+  frag.appendChild(grid);
+
+  // Duration + end time preview row
+  const durGrid = el('div', { className: 'grid-2' });
+  const durg = formGroup('Duration (e.g. 2h, 1h 30m)');
+  const duri = formInput('text', form.duration || '', 'e.g. 1h 30m');
+  duri.addEventListener('input', e => { form.duration = e.target.value; updatePreview(); });
+  durg.appendChild(duri); durGrid.appendChild(durg);
+
+  const previewG = formGroup('End Time');
+  const previewEl = el('div', { style: 'font-size:15px;color:#aaa;padding:10px 12px;background:#111;border:1px solid #2a2a35;border-radius:8px;min-height:42px' }, '—');
+  previewG.appendChild(previewEl); durGrid.appendChild(previewG);
+  frag.appendChild(durGrid);
+
+  // Duration + end time preview uses global calcActivityEndTime
+  function updatePreview() {
+    const end = calcActivityEndTime(form.time, form.duration);
+    previewEl.textContent = end || '—';
+    previewEl.style.color = end ? '#7AC67A' : '#aaa';
+  }
+  updatePreview();
+
+  const ag = formGroup('Address (optional — opens in maps)');
+  const ai = formInput('text', form.address || '', 'e.g. Via della Muratte, Rome');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  const ng = formGroup('Notes');
+  const na = el('textarea', { className: 'form-textarea', placeholder: 'Booking info, reminders…' });
+  na.value = form.notes || '';
+  na.addEventListener('input', e => { form.notes = e.target.value; });
+  ng.appendChild(na); frag.appendChild(ng);
+
+  const lnkg = formGroup('Link (optional)');
+  const lnki = formInput('text', form.link || '', 'https://…');
+  lnki.addEventListener('input', e => { form.link = e.target.value; });
+  lnkg.appendChild(lnki); frag.appendChild(lnkg);
+
+  // ── Attachments ──
+  const fg = formGroup('Attachments (tickets, screenshots)');
+  const fileWrap = el('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+  const fileListEl = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;min-height:0' });
+
+  function renderFileThumbs() {
+    while (fileListEl.firstChild) fileListEl.removeChild(fileListEl.firstChild);
+    (form.files || []).forEach((f, i) => {
+      const thumb = el('div', { style: 'position:relative;display:inline-block' });
+      if (f.type && f.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.setAttribute('style', 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #333');
+        img.src = f.data;
+        thumb.appendChild(img);
+      } else {
+        thumb.appendChild(el('div', { style: 'width:60px;height:60px;border-radius:6px;border:1px solid #333;background:#1e1e28;display:flex;align-items:center;justify-content:center;font-size:24px' }, '📄'));
+      }
+      const removeBtn = el('button', { style: 'position:absolute;top:-6px;right:-6px;background:#cc5555;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;color:#fff;cursor:pointer;line-height:1;padding:0' }, '✕');
+      removeBtn.addEventListener('click', e => {
+        e.preventDefault();
+        form.files.splice(i, 1);
+        renderFileThumbs();
+      });
+      thumb.appendChild(removeBtn);
+      fileListEl.appendChild(thumb);
+    });
+  }
+  renderFileThumbs();
+  fileWrap.appendChild(fileListEl);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*,.pdf';
+  fileInput.multiple = true;
+  fileInput.style.cssText = 'display:none';
+  fileInput.addEventListener('change', () => {
+    const toLoad = Array.from(fileInput.files);
+    let loaded = 0;
+    toLoad.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        if (!form.files) form.files = [];
+        form.files.push({ name: file.name, type: file.type, data: e.target.result });
+        loaded++;
+        if (loaded === toLoad.length) renderFileThumbs();
+      };
+      reader.readAsDataURL(file);
+    });
+    fileInput.value = '';
+  });
+  fileWrap.appendChild(fileInput);
+
+  const uploadBtn = el('button', { style: 'background:#1e1e28;border:1px dashed #444;border-radius:8px;color:#888;font-size:13px;padding:10px;cursor:pointer;text-align:center;width:100%' }, '📎 Tap to attach file');
+  uploadBtn.addEventListener('click', e => { e.preventDefault(); fileInput.click(); });
+  fileWrap.appendChild(uploadBtn);
+  fg.appendChild(fileWrap);
+  frag.appendChild(fg);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn(editing ? 'Save Changes' : 'Add Activity', city.color);
+  save_.addEventListener('click', () => {
+    if (!form.title.trim()) return;
+    if (editing) {
+      Object.assign(activity, form);
+    } else {
+      day.activities.push({ id: genId(), ...form });
+    }
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderTransportModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '✈️ Getting Here'));
+  const form = { ...city.transport };
+
+  const g1 = el('div', { className: 'grid-2' });
+  const tg = formGroup('Type');
+  const sel = el('select', { className: 'form-select' });
+  ['Flight','Train','Bus','Car','Ferry'].forEach(opt => {
+    const o = el('option', { value: opt }, opt);
+    if (form.type === opt) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', e => { form.type = e.target.value; });
+  tg.appendChild(sel); g1.appendChild(tg);
+  const og = formGroup('Operator / Airline'); const oi = formInput('text', form.operator || '', 'e.g. Trenitalia');
+  oi.addEventListener('input', e => { form.operator = e.target.value; });
+  og.appendChild(oi); g1.appendChild(og);
+  frag.appendChild(g1);
+
+  const g2 = el('div', { className: 'grid-2' });
+  const fg = formGroup('Flight / Train #'); const fi = formInput('text', form.flightNumber || '', 'e.g. FR4421');
+  fi.addEventListener('input', e => { form.flightNumber = e.target.value; });
+  fg.appendChild(fi); g2.appendChild(fg);
+  const cg = formGroup('Confirmation #'); const ci = formInput('text', form.confirmation || '', 'Booking ref');
+  ci.addEventListener('input', e => { form.confirmation = e.target.value; });
+  cg.appendChild(ci); g2.appendChild(cg);
+  frag.appendChild(g2);
+
+  const g3 = el('div', { className: 'grid-2' });
+  const fromG = formGroup('From'); const fromI = formInput('text', form.departure || '', 'Departing from');
+  fromI.addEventListener('input', e => { form.departure = e.target.value; });
+  fromG.appendChild(fromI); g3.appendChild(fromG);
+  const toG = formGroup('To'); const toI = formInput('text', form.arrival || '', 'Arriving at');
+  toI.addEventListener('input', e => { form.arrival = e.target.value; });
+  toG.appendChild(toI); g3.appendChild(toG);
+  frag.appendChild(g3);
+
+  const g4 = el('div', { className: 'grid-2' });
+  const depG = formGroup('Departure Date/Time'); const depI = formInput('text', form.departureTime || '', 'May 20, 10:30 PM');
+  depI.addEventListener('input', e => { form.departureTime = e.target.value; });
+  depG.appendChild(depI); g4.appendChild(depG);
+  const arrG = formGroup('Arrival Date/Time'); const arrI = formInput('text', form.arrivalTime || '', 'May 21, 2:00 PM');
+  arrI.addEventListener('input', e => { form.arrivalTime = e.target.value; });
+  arrG.appendChild(arrI); g4.appendChild(arrG);
+  frag.appendChild(g4);
+
+  const ng = formGroup('Notes');
+  const na = el('textarea', { className: 'form-textarea', placeholder: 'Seat numbers, terminal, luggage info…' });
+  na.value = form.notes || '';
+  na.addEventListener('input', e => { form.notes = e.target.value; });
+  ng.appendChild(na); frag.appendChild(ng);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', city.color);
+  save_.addEventListener('click', () => { Object.assign(city.transport, form); save(); closeModal(); });
+  footer.appendChild(cancel); footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderAccomModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '🏨 Accommodation'));
+  const form = { ...city.accommodation };
+
+  const g1 = el('div', { className: 'grid-2' });
+  const ng = formGroup('Name / Property'); const ni = formInput('text', form.name || '', 'e.g. Hotel Centrale');
+  ni.addEventListener('input', e => { form.name = e.target.value; });
+  ng.appendChild(ni); g1.appendChild(ng);
+  const cg = formGroup('Confirmation #'); const ci = formInput('text', form.confirmationNumber || '', 'Booking ref');
+  ci.addEventListener('input', e => { form.confirmationNumber = e.target.value; });
+  cg.appendChild(ci); g1.appendChild(cg);
+  frag.appendChild(g1);
+
+  const ag = formGroup('Address'); const ai = formInput('text', form.address || '', 'Full street address');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  const g2 = el('div', { className: 'grid-2' });
+  const inG = formGroup('Check-in'); const inI = formInput('text', form.checkIn || '', 'May 21, 3:00 PM');
+  inI.addEventListener('input', e => { form.checkIn = e.target.value; });
+  inG.appendChild(inI); g2.appendChild(inG);
+  const outG = formGroup('Check-out'); const outI = formInput('text', form.checkOut || '', 'May 22, 11:00 AM');
+  outI.addEventListener('input', e => { form.checkOut = e.target.value; });
+  outG.appendChild(outI); g2.appendChild(outG);
+  frag.appendChild(g2);
+
+  const dg = formGroup('Door / Key / Lock Code'); const di = formInput('text', form.doorCode || '', 'e.g. #1234 or lockbox code');
+  di.addEventListener('input', e => { form.doorCode = e.target.value; });
+  dg.appendChild(di); frag.appendChild(dg);
+
+  const g3 = el('div', { className: 'grid-2' });
+  const wng = formGroup('Wi-Fi Name'); const wni = formInput('text', form.wifiName || '', 'Network name');
+  wni.addEventListener('input', e => { form.wifiName = e.target.value; });
+  wng.appendChild(wni); g3.appendChild(wng);
+  const wpg = formGroup('Wi-Fi Password'); const wpi = formInput('text', form.wifiPassword || '', 'Password');
+  wpi.addEventListener('input', e => { form.wifiPassword = e.target.value; });
+  wpg.appendChild(wpi); g3.appendChild(wpg);
+  frag.appendChild(g3);
+
+  const notesG = formGroup('Other Important Info');
+  const notesA = el('textarea', { className: 'form-textarea', placeholder: 'Host contact, parking, house rules…' });
+  notesA.value = form.notes || '';
+  notesA.addEventListener('input', e => { form.notes = e.target.value; });
+  notesG.appendChild(notesA); frag.appendChild(notesG);
+
+  const oig = formGroup('Other Info (expandable section)');
+  const oia = el('textarea', { className: 'form-textarea', placeholder: 'Extra details, local tips, emergency contacts…' });
+  oia.value = form.otherInfo || '';
+  oia.addEventListener('input', e => { form.otherInfo = e.target.value; });
+  oig.appendChild(oia); frag.appendChild(oig);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', city.color);
+  save_.addEventListener('click', () => { Object.assign(city.accommodation, form); save(); closeModal(); });
+  footer.appendChild(cancel); footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+// ── Helpers ──
+function el(tag, attrs = {}, text) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'className') e.className = v;
+    else if (k === 'style' && typeof v === 'string') e.setAttribute('style', v);
+    else if (k in e) e[k] = v;
+    else e.setAttribute(k, v);
+  });
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function formGroup(label) {
+  const g = el('div', { className: 'form-group' });
+  g.appendChild(el('label', { className: 'form-label' }, label));
+  return g;
+}
+
+function formInput(type, value, placeholder) {
+  return el('input', { type, className: 'form-input', value: value || '', placeholder: placeholder || '' });
+}
+
+function makeBtn(text, color, small = false, variant = 'primary') {
+  const btn = el('button', { className: 'btn' + (small ? ' btn-sm' : '') + (variant === 'secondary' ? ' btn-secondary' : ' btn-primary') }, text);
+  if (variant === 'primary' && color) btn.style.background = color;
+  return btn;
+}
+
+function appendInfoField(parent, label, value, mono = false) {
+  if (!value) return;
+  const field = el('div', { className: 'info-field' });
+  field.appendChild(el('div', { className: 'info-label' }, label));
+  field.appendChild(el('div', { className: 'info-value' + (mono ? ' mono' : '') }, value));
+  parent.appendChild(field);
+}
+
+// ── Boot ──
+try { render(); } catch(e) { console.error('Boot error:', e); }
+</script>
+
+</body>
+</html>
