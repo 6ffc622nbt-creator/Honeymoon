@@ -118,6 +118,7 @@
 
 .dragging { opacity: 0.4; }
 .drag-over { border-color: #fff !important; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -733,6 +734,7 @@ function renderCity(city) {
   }
   frag.appendChild(cityHeader);
 
+  frag.appendChild(renderWeatherPanel(city));
   frag.appendChild(renderTransportPanel(city));
   frag.appendChild(renderAccomPanel(city));
 
@@ -870,6 +872,199 @@ function renderThingsToDoPanel(city) {
     panel.appendChild(body);
   }
   return panel;
+}
+
+// ── Weather ──
+const CITY_COORDS = {
+  'Rome':        { lat: 41.9028, lon: 12.4964 },
+  'Riomaggiore': { lat: 44.0993, lon: 9.7371  },
+  'Florence':    { lat: 43.7696, lon: 11.2558 },
+  'Dublin':      { lat: 53.3498, lon: -6.2603 },
+};
+
+const weatherCache = {};
+const geocodeCache = {};
+
+async function getCoords(cityName) {
+  if (CITY_COORDS[cityName]) return CITY_COORDS[cityName];
+  if (geocodeCache[cityName]) return geocodeCache[cityName];
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`);
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      const coords = { lat: data.results[0].latitude, lon: data.results[0].longitude };
+      geocodeCache[cityName] = coords;
+      return coords;
+    }
+  } catch(e) {}
+  return null;
+}
+
+const WMO_CODES = {
+  0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',
+  45:'Foggy',48:'Icy Fog',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',
+  61:'Light Rain',63:'Rain',65:'Heavy Rain',71:'Light Snow',73:'Snow',75:'Heavy Snow',
+  80:'Showers',81:'Heavy Showers',95:'Thunderstorm',96:'Hail Storm',99:'Heavy Hail',
+};
+const WMO_ICONS = {
+  0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',
+  51:'🌦',53:'🌦',55:'🌧',61:'🌦',63:'🌧',65:'🌧',
+  71:'🌨',73:'❄️',75:'❄️',80:'🌧',81:'🌧',95:'⛈',96:'⛈',99:'⛈',
+};
+
+function getWMOIcon(code) { return WMO_ICONS[code] || '🌡'; }
+function getWMODesc(code) { return WMO_CODES[code] || 'Unknown'; }
+
+async function fetchWeather(cityName) {
+  const now = Date.now();
+  if (weatherCache[cityName] && now - weatherCache[cityName].ts < 15 * 60 * 1000) {
+    return weatherCache[cityName].data;
+  }
+  try {
+    const coords = await getCoords(cityName);
+    if (!coords) return null;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5`;
+    const res = await fetch(url);
+    const data = await res.json();
+    weatherCache[cityName] = { ts: now, data };
+    return data;
+  } catch(e) {
+    return null;
+  }
+}
+
+function renderWeatherPanel(city) {
+  const panelKey = city.id + '_weather';
+  const isOpen = !!state.openPanels[panelKey];
+  const viewKey = city.id + '_weather_view';
+  const weatherView = state.openPanels[viewKey] || 'hourly';
+
+  const panel = el('div', { className: 'panel', style: `--pc:${city.color};border-color:${city.color}44;background:linear-gradient(135deg,#1a1a28,#0f1520)` });
+  const header = el('div', { className: 'panel-header' });
+  const titleDiv = el('div', { className: 'panel-title filled' });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, '🌤'));
+  titleDiv.appendChild(el('span', {}, `${city.name} Weather`));
+  header.appendChild(titleDiv);
+  const chev = el('span', { className: 'panel-chevron' }, isOpen ? '▲' : '▼');
+  header.appendChild(chev);
+  header.addEventListener('click', () => {
+    state.openPanels[panelKey] = !isOpen;
+    render();
+  });
+  panel.appendChild(header);
+
+  if (isOpen) {
+    const body = el('div', { className: 'panel-body' });
+    const cached = weatherCache[city.name];
+
+    if (cached) {
+      body.appendChild(buildWeatherContent(city.name, cached.data, weatherView));
+    } else {
+      // Loading state
+      const loading = el('div', { style: 'display:flex;align-items:center;gap:8px;padding:16px 0;color:#444;font-size:13px' });
+      const spinner = el('div', { style: 'width:16px;height:16px;border:2px solid #333;border-top-color:'+city.color+';border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0' });
+      loading.appendChild(spinner);
+      loading.appendChild(el('span', {}, 'Fetching live weather…'));
+      body.appendChild(loading);
+      // Fetch and re-render
+      fetchWeather(city.name).then(() => render());
+    }
+
+    panel.appendChild(body);
+  }
+  return panel;
+}
+
+function buildWeatherContent(cityName, data, weatherView) {
+  const frag = document.createDocumentFragment();
+  const c = data.current;
+  const nowHour = new Date().getHours();
+
+  // Current conditions
+  const cur = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;border-bottom:1px solid #1e1e26;margin-bottom:12px' });
+  const curLeft = el('div', { style: 'display:flex;align-items:center;gap:10px' });
+  curLeft.appendChild(el('div', { style: 'font-size:38px;line-height:1' }, getWMOIcon(c.weather_code)));
+  const tempWrap = el('div', { style: 'display:flex;align-items:flex-start;gap:2px' });
+  tempWrap.appendChild(el('div', { style: 'font-size:42px;font-weight:700;color:#fff;letter-spacing:-2px;line-height:1' }, Math.round(c.temperature_2m) + ''));
+  tempWrap.appendChild(el('div', { style: 'font-size:18px;color:#666;margin-top:5px' }, '°C'));
+  curLeft.appendChild(tempWrap);
+  cur.appendChild(curLeft);
+  const curRight = el('div', { style: 'text-align:right' });
+  curRight.appendChild(el('div', { style: 'font-size:14px;color:#aaa;margin-bottom:3px;font-weight:500' }, getWMODesc(c.weather_code)));
+  curRight.appendChild(el('div', { style: 'font-size:12px;color:#555' }, `Feels like ${Math.round(c.apparent_temperature)}°`));
+  curRight.appendChild(el('div', { style: `font-size:11px;color:#E8624A;font-weight:600;letter-spacing:0.5px;margin-top:2px` }, cityName.toUpperCase()));
+  cur.appendChild(curRight);
+  frag.appendChild(cur);
+
+  // Stats row
+  const stats = el('div', { style: 'display:flex;gap:6px;margin-bottom:12px' });
+  [
+    { icon:'💧', val:`${c.relative_humidity_2m}%`, label:'Humidity' },
+    { icon:'💨', val:`${Math.round(c.wind_speed_10m)} km/h`, label:'Wind' },
+    { icon:'🌧', val:`${c.precipitation_probability ?? 0}%`, label:'Rain' },
+  ].forEach(s => {
+    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
+    stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
+    stat.appendChild(el('div', { style: 'font-size:12px;font-weight:700;color:#ddd;margin-bottom:2px' }, s.val));
+    stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
+    stats.appendChild(stat);
+  });
+  frag.appendChild(stats);
+
+  // View switcher
+  const viewTabs = el('div', { style: 'display:flex;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:3px;margin-bottom:12px;gap:2px' });
+  ['hourly','5-day'].forEach(v => {
+    const btn = el('button', { style: `flex:1;border:none;border-radius:8px;font-size:12px;font-weight:600;padding:7px 0;cursor:pointer;transition:all 0.15s;${weatherView===v?'background:#E8624A;color:#fff':'background:none;color:#555'}` }, v === 'hourly' ? 'Hourly' : '5-Day');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const city_ = state.data.cities.find(ct => ct.name === cityName);
+      if (city_) { state.openPanels[city_.id + '_weather_view'] = v; render(); }
+    });
+    viewTabs.appendChild(btn);
+  });
+  frag.appendChild(viewTabs);
+
+  if (weatherView === 'hourly') {
+    // Hourly scroll — next 12 hours
+    const scroll = el('div', { style: 'display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none' });
+    const hours = data.hourly;
+    // Parse hour directly from ISO string to avoid timezone offset issues
+    let startIdx = hours.time.findIndex(t => parseInt(t.slice(11, 13)) >= nowHour);
+    if (startIdx < 0) startIdx = 0;
+    const sliceEnd = Math.min(startIdx + 12, hours.time.length);
+    for (let i = startIdx; i < sliceEnd; i++) {
+      const isNow = i === startIdx;
+      const h = parseInt(hours.time[i].slice(11, 13));
+      const label = isNow ? 'NOW' : (h === 0 ? '12AM' : h < 12 ? `${h}AM` : h === 12 ? '12PM' : `${h-12}PM`);
+      const card = el('div', { style: `flex-shrink:0;background:#111;border:1px solid ${isNow?'#E8624A':'#1e1e26'};${isNow?'background:rgba(232,98,74,0.08);':''}border-radius:12px;padding:10px 8px;text-align:center;min-width:55px` });
+      card.appendChild(el('div', { style: `font-size:11px;font-weight:600;margin-bottom:5px;${isNow?'color:#E8624A':'color:#555'}` }, label));
+      card.appendChild(el('div', { style: 'font-size:18px;margin-bottom:5px' }, getWMOIcon(hours.weather_code[i])));
+      card.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee;margin-bottom:3px' }, Math.round(hours.temperature_2m[i]) + '°'));
+      card.appendChild(el('div', { style: 'font-size:10px;color:#4A90E2' }, `💧${hours.precipitation_probability[i]}%`));
+      scroll.appendChild(card);
+    }
+    frag.appendChild(scroll);
+  } else {
+    // 5-day forecast
+    const daily = data.daily;
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    for (let i = 0; i < 5; i++) {
+      const parts = daily.time[i].split('-');
+      const dayOfWeek = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])).getDay();
+      const row = el('div', { style: 'display:flex;align-items:center;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:10px 12px;margin-bottom:6px;gap:10px' });
+      row.appendChild(el('div', { style: 'font-size:13px;font-weight:600;color:#aaa;width:32px;flex-shrink:0' }, i === 0 ? 'Today' : days[dayOfWeek]));
+      row.appendChild(el('div', { style: 'font-size:20px;flex-shrink:0' }, getWMOIcon(daily.weather_code[i])));
+      row.appendChild(el('div', { style: 'flex:1;font-size:12px;color:#555' }, getWMODesc(daily.weather_code[i])));
+      const temps = el('div', { style: 'display:flex;gap:6px;align-items:center;flex-shrink:0' });
+      temps.appendChild(el('div', { style: 'font-size:13px;font-weight:700;color:#eee' }, Math.round(daily.temperature_2m_max[i]) + '°'));
+      temps.appendChild(el('div', { style: 'font-size:12px;color:#444' }, Math.round(daily.temperature_2m_min[i]) + '°'));
+      row.appendChild(temps);
+      row.appendChild(el('div', { style: 'font-size:11px;color:#4A90E2;width:30px;text-align:right;flex-shrink:0' }, `💧${daily.precipitation_probability_max[i]}%`));
+      frag.appendChild(row);
+    }
+  }
+
+  return frag;
 }
 
 function renderTransportPanel(city) {
