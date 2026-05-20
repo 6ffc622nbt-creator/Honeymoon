@@ -461,19 +461,18 @@ function openFileViewer(f) {
     wrapper.appendChild(img);
     content.appendChild(wrapper);
   } else if (f.type === 'application/pdf') {
-    // With a real URL, we can open in Safari directly
     const pdfCard = document.createElement('div');
     pdfCard.setAttribute('style', 'padding:40px 20px;text-align:center;width:100%;');
     pdfCard.innerHTML = '<div style="font-size:64px;margin-bottom:16px">📄</div>';
     const pdfName = document.createElement('div');
     pdfName.textContent = f.name || 'Document.pdf';
     pdfName.setAttribute('style', 'color:#aaa;font-size:15px;margin-bottom:24px;word-break:break-all;');
-    const openBtn = document.createElement('a');
-    openBtn.href = fileUrl;
-    openBtn.target = '_blank';
-    openBtn.rel = 'noopener noreferrer';
+    const openBtn = document.createElement('button');
     openBtn.textContent = '📂 Open PDF';
-    openBtn.setAttribute('style', 'display:inline-block;background:#E8624A;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;');
+    openBtn.setAttribute('style', 'background:#E8624A;color:#fff;border:none;border-radius:10px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;display:block;margin:0 auto;');
+    openBtn.addEventListener('click', () => {
+      window.location.href = fileUrl;
+    });
     pdfCard.appendChild(pdfName);
     pdfCard.appendChild(openBtn);
     content.appendChild(pdfCard);
