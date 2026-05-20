@@ -371,10 +371,40 @@ function loadData() {
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
 
+// ── Undo History ──
+const undoStack = [];
+const MAX_UNDO = 20;
+let lastSavedSnapshot = null;
+
+function pushUndo() {
+  // Only push if state actually changed from last saved snapshot
+  const current = JSON.stringify(state.data);
+  if (current !== lastSavedSnapshot) {
+    if (lastSavedSnapshot) undoStack.push(lastSavedSnapshot);
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+    lastSavedSnapshot = current;
+  }
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  const previous = undoStack.pop();
+  lastSavedSnapshot = previous;
+  state.data = JSON.parse(previous);
+  if (!state.data.cities.find(c => c.id === state.activeCityId)) {
+    state.activeCityId = state.data.cities[0]?.id || null;
+  }
+  suppressNextSync = true;
+  try { DATA_REF.set(state.data); } catch(e) { suppressNextSync = false; }
+  flashSaved();
+  render();
+}
+
 let saveTimer = null;
 function save() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    pushUndo();
     try {
       DATA_REF.set(state.data);
     } catch(e) {
@@ -384,11 +414,14 @@ function save() {
   }, 600);
 }
 
+let suppressNextSync = false;
+
 // Listen for real-time updates from Firebase
 function startFirebaseSync() {
   try {
     DATA_REF.on('value', snapshot => {
       try {
+        if (suppressNextSync) { suppressNextSync = false; return; }
         const data = snapshot.val();
         if (data) {
           state.data = data;
@@ -399,8 +432,7 @@ function startFirebaseSync() {
           DATA_REF.set(state.data);
         }
         firebaseInitialized = true;
-        if (authState.viewed) render();
-        else render();
+        render();
       } catch(e) {
         console.error('Firebase data error:', e);
         if (!firebaseInitialized) { firebaseInitialized = true; render(); }
@@ -829,6 +861,16 @@ function renderApp() {
     }
   });
   header.appendChild(lockBtn);
+
+  // Undo button — only in edit mode
+  if (authState.editing && undoStack.length > 0) {
+    const undoBtn = el('button', { style: 'background:none;border:1px solid #333;border-radius:8px;color:#aaa;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:6px;' }, '↩ Undo');
+    undoBtn.addEventListener('click', () => {
+      if (confirm('Undo last change?')) undo();
+    });
+    header.appendChild(undoBtn);
+  }
+
   frag.appendChild(header);
 
   // Tabs
@@ -1107,7 +1149,10 @@ async function fetchWeather(cityName) {
 
     // Fetch air quality + pollen separately from Open-Meteo AQI endpoint
     try {
-      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=us_aqi,grass_pollen,birch_pollen,ragweed_pollen&timezone=auto&domains=cams_europe`;
+      // Use European domain for better pollen data — all 4 cities are in Europe
+      const isEurope = coords.lat > 34 && coords.lat < 72 && coords.lon > -25 && coords.lon < 45;
+      const domain = isEurope ? '&domains=cams_europe' : '';
+      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=us_aqi,grass_pollen,birch_pollen,ragweed_pollen&timezone=auto${domain}`;
       const aqiRes = await fetch(aqiUrl);
       const aqiData = await aqiRes.json();
       data.airQuality = aqiData.current;
