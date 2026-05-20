@@ -494,8 +494,133 @@ function openFileViewer(f) {
   document.body.appendChild(overlay);
 }
 
+// ── Translation Panel ──
+const CITY_LANGUAGES = {
+  'Rome':        { code: 'it', name: 'Italian',  flag: '🇮🇹' },
+  'Riomaggiore': { code: 'it', name: 'Italian',  flag: '🇮🇹' },
+  'Florence':    { code: 'it', name: 'Italian',  flag: '🇮🇹' },
+  'Dublin':      { code: 'ga', name: 'Irish',    flag: '🇮🇪' },
+};
+const LANG_FALLBACK = { code: 'it', name: 'Italian', flag: '🇮🇹' };
+
+const QUICK_PHRASES = {
+  'it': [
+    { en: 'Hello', tr: 'Ciao' },
+    { en: 'Thank you', tr: 'Grazie' },
+    { en: 'Please', tr: 'Per favore' },
+    { en: 'Excuse me', tr: 'Scusi' },
+    { en: 'Where is...?', tr: 'Dov\'è...?' },
+    { en: 'The bill, please', tr: 'Il conto, per favore' },
+    { en: 'Do you speak English?', tr: 'Parla inglese?' },
+    { en: 'I don\'t understand', tr: 'Non capisco' },
+  ],
+  'ga': [
+    { en: 'Hello', tr: 'Dia dhuit' },
+    { en: 'Thank you', tr: 'Go raibh maith agat' },
+    { en: 'Please', tr: 'Le do thoil' },
+    { en: 'Excuse me', tr: 'Gabh mo leithscéal' },
+    { en: 'Cheers!', tr: 'Sláinte!' },
+    { en: 'The bill, please', tr: 'An bille, le do thoil' },
+    { en: 'Do you speak English?', tr: 'An labhraíonn tú Béarla?' },
+    { en: 'I don\'t understand', tr: 'Ní thuigim' },
+  ],
+};
+
+function renderTranslationPanel(city) {
+  const panelKey = city.id + '_translation';
+  const isOpen = !!state.openPanels[panelKey];
+  const lang = CITY_LANGUAGES[city.name] || LANG_FALLBACK;
+  const phrases = QUICK_PHRASES[lang.code] || QUICK_PHRASES['it'];
+
+  const panel = el('div', { className: 'panel', style: `--pc:${city.color};margin-top:24px;border-color:${city.color}` });
+  const header = el('div', { className: 'panel-header' });
+  const titleDiv = el('div', { className: 'panel-title filled' });
+  titleDiv.appendChild(el('span', { style: 'font-size:16px' }, lang.flag));
+  titleDiv.appendChild(el('span', {}, `Translate to ${lang.name}`));
+  header.appendChild(titleDiv);
+  const chev = el('span', { className: 'panel-chevron' }, isOpen ? '▲' : '▼');
+  header.appendChild(chev);
+  header.addEventListener('click', () => { state.openPanels[panelKey] = !isOpen; render(); });
+  panel.appendChild(header);
+
+  if (isOpen) {
+    const body = el('div', { className: 'panel-body' });
+
+    // Custom translate input
+    const inputWrap = el('div', { style: 'display:flex;gap:8px;margin-top:4px;margin-bottom:14px' });
+    const textInput = el('input', { type: 'text', className: 'form-input', placeholder: `Type English text to translate…`, style: 'flex:1;font-size:14px;' });
+    const translateBtn = makeBtn('Go', city.color, true);
+    translateBtn.style.flexShrink = '0';
+    inputWrap.appendChild(textInput);
+    inputWrap.appendChild(translateBtn);
+    body.appendChild(inputWrap);
+
+    const translationResult = el('div', { style: 'background:#111;border:1px solid #1e1e26;border-radius:8px;padding:12px;margin-bottom:14px;min-height:44px;font-size:15px;color:#eee;display:none' }, '');
+    body.appendChild(translationResult);
+
+    async function doTranslate() {
+      const text = textInput.value.trim();
+      if (!text) return;
+      translationResult.textContent = '⏳ Translating…';
+      translationResult.style.display = 'block';
+      translationResult.style.color = '#555';
+      try {
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${lang.code}`);
+        const data = await res.json();
+        if (data.responseStatus === 200) {
+          translationResult.textContent = data.responseData.translatedText;
+          translationResult.style.color = '#eee';
+        } else {
+          translationResult.textContent = '⚠️ Translation failed. Try again.';
+          translationResult.style.color = '#555';
+        }
+      } catch(e) {
+        translationResult.textContent = '⚠️ No connection.';
+        translationResult.style.color = '#555';
+      }
+    }
+
+    translateBtn.addEventListener('click', doTranslate);
+    textInput.addEventListener('keydown', e => { if (e.key === 'Enter') doTranslate(); });
+
+    // Quick phrases
+    body.appendChild(el('div', { style: 'font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#444;font-weight:600;margin-bottom:8px' }, 'Quick Phrases'));
+    phrases.forEach(p => {
+      const row = el('div', { style: 'display:flex;align-items:center;justify-content:space-between;background:#111;border:1px solid #1e1e26;border-radius:8px;padding:10px 12px;margin-bottom:6px;gap:10px;cursor:pointer' });
+      row.appendChild(el('div', { style: 'font-size:13px;color:#aaa;flex:1' }, p.en));
+      row.appendChild(el('div', { style: `font-size:13px;font-weight:600;color:${city.color};flex:1;text-align:right` }, p.tr));
+      // Tap to copy translation
+      row.addEventListener('click', () => {
+        if (navigator.clipboard) navigator.clipboard.writeText(p.tr).catch(() => {});
+        row.style.background = '#1a1a28';
+        setTimeout(() => { if (row.isConnected) row.style.background = '#111'; }, 600);
+      });
+      body.appendChild(row);
+    });
+
+    panel.appendChild(body);
+  }
+
+  return panel;
+}
+
 // ── Currency Panel ──
 let currencyState = { eurValue: '', selectedCode: 'USD' };
+let liveRates = null;
+const FALLBACK_RATES = { USD: 1.09, GBP: 0.86, CAD: 1.48, JPY: 162.5 };
+
+async function fetchLiveRates() {
+  if (liveRates) return liveRates;
+  try {
+    const res = await fetch('https://open.er-api.com/v6/latest/EUR');
+    const data = await res.json();
+    if (data && data.rates) {
+      liveRates = data.rates;
+      return liveRates;
+    }
+  } catch(e) {}
+  return null;
+}
 
 function renderCurrencyPanel(city) {
   const panelKey = city.id + '_currency';
@@ -512,22 +637,35 @@ function renderCurrencyPanel(city) {
   header.addEventListener('click', () => {
     state.openPanels[panelKey] = !isOpen;
     render();
+    if (!isOpen && !liveRates) fetchLiveRates().then(r => { if (r) render(); });
   });
   panel.appendChild(header);
 
   if (isOpen) {
     const body = el('div', { className: 'panel-body' });
 
-    const targetCurrencies = [
-      { code: 'USD', symbol: '$',  name: 'US Dollar',       rate: 1.09 },
-      { code: 'GBP', symbol: '£',  name: 'British Pound',   rate: 0.86 },
-      { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', rate: 1.48 },
-      { code: 'JPY', symbol: '¥',  name: 'Japanese Yen',    rate: 162.5 },
+    const CURRENCY_LIST = [
+      { code: 'USD', symbol: '$',  name: 'US Dollar'       },
+      { code: 'GBP', symbol: '£',  name: 'British Pound'   },
+      { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+      { code: 'JPY', symbol: '¥',  name: 'Japanese Yen'    },
     ];
+
+    const getRate = code => (liveRates && liveRates[code]) ? liveRates[code] : FALLBACK_RATES[code];
+    const isLive = !!liveRates;
+
+    // Rate source label
+    const sourceLabel = el('div', { style: `font-size:10px;color:${isLive?'#7AC67A':'#555'};margin-bottom:10px;margin-top:4px` },
+      isLive ? '🟢 Live rates' : '⚪ Approximate rates — tap to refresh');
+    if (!isLive) {
+      sourceLabel.style.cursor = 'pointer';
+      sourceLabel.addEventListener('click', () => fetchLiveRates().then(() => render()));
+    }
+    body.appendChild(sourceLabel);
 
     if (!currencyState.selectedCode) currencyState.selectedCode = 'USD';
 
-    const row = el('div', { style: 'display:flex;align-items:center;gap:10px;margin-top:8px' });
+    const row = el('div', { style: 'display:flex;align-items:center;gap:10px' });
 
     const eurWrap = el('div', { style: 'display:flex;align-items:center;gap:6px;flex:1;background:#111;border:1px solid #2a2a35;border-radius:8px;padding:8px 12px' });
     eurWrap.appendChild(el('span', { style: 'color:#666;font-size:14px;font-weight:700;flex-shrink:0' }, '€'));
@@ -544,7 +682,7 @@ function renderCurrencyPanel(city) {
     const select = document.createElement('select');
     select.className = 'form-select';
     select.setAttribute('style', 'flex:1;max-width:160px');
-    targetCurrencies.forEach(opt => {
+    CURRENCY_LIST.forEach(opt => {
       const o = el('option', { value: opt.code }, `${opt.symbol} ${opt.name}`);
       if (opt.code === currencyState.selectedCode) o.selected = true;
       select.appendChild(o);
@@ -561,10 +699,11 @@ function renderCurrencyPanel(city) {
     function convert() {
       const eur = parseFloat(eurInput.value);
       const code = select.value;
-      const cur = targetCurrencies.find(o => o.code === code);
+      const cur = CURRENCY_LIST.find(o => o.code === code);
+      const rate = getRate(code);
       if (!cur || isNaN(eur) || eurInput.value === '') { result.textContent = ''; rateNote.textContent = ''; return; }
-      result.textContent = `${cur.symbol}${(eur * cur.rate).toFixed(2)} ${cur.code}`;
-      rateNote.textContent = `1 EUR = ${cur.rate} ${cur.code} · Approximate rate`;
+      result.textContent = `${cur.symbol}${(eur * rate).toFixed(2)} ${cur.code}`;
+      rateNote.textContent = `1 EUR = ${rate.toFixed(4)} ${cur.code}`;
     }
 
     if (currencyState.eurValue) convert();
@@ -588,7 +727,7 @@ function render() {
 
 function renderApp() {
   const { data, activeCityId, editingTitle } = state;
-  const city = data.cities.find(c => c.id === activeCityId);
+  const city = data.cities.find(c => c.id === activeCityId) || data.cities[0] || null;
   const frag = document.createDocumentFragment();
 
   // Header
@@ -654,7 +793,14 @@ function renderApp() {
     empty.appendChild(btn);
     main.appendChild(empty);
   } else {
-    main.appendChild(renderCity(city));
+    try {
+      main.appendChild(renderCity(city));
+    } catch(e) {
+      console.error('renderCity error:', e);
+      const errDiv = el('div', { style: 'padding:40px;text-align:center;color:#555;font-size:14px' });
+      errDiv.textContent = '⚠️ Error loading city. Try switching tabs or refreshing.';
+      main.appendChild(errDiv);
+    }
   }
   frag.appendChild(main);
 
@@ -664,6 +810,12 @@ function renderApp() {
 }
 
 function renderCity(city) {
+  // Safety defaults — prevent crashes if Firebase data is missing fields
+  if (!city.thingsToDo) city.thingsToDo = { eat: [], see: [], buy: [] };
+  if (!city.transport) city.transport = { type:'Flight', operator:'', flightNumber:'', departure:'', arrival:'', departureTime:'', arrivalTime:'', confirmation:'', notes:'' };
+  if (!city.accommodation) city.accommodation = { name:'', address:'', doorCode:'', checkIn:'', checkOut:'', confirmationNumber:'', wifiName:'', wifiPassword:'', notes:'' };
+  if (!city.days) city.days = [];
+
   const frag = document.createDocumentFragment();
 
   const cityHeader = el('div', { className: 'city-header' });
@@ -711,6 +863,7 @@ function renderCity(city) {
 
   frag.appendChild(renderThingsToDoPanel(city));
   frag.appendChild(renderCurrencyPanel(city));
+  frag.appendChild(renderTranslationPanel(city));
 
   return frag;
 }
@@ -881,7 +1034,7 @@ async function fetchWeather(cityName) {
   try {
     const coords = await getCoords(cityName);
     if (!coords) return null;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&forecast_days=5&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
     const res = await fetch(url);
     const data = await res.json();
     weatherCache[cityName] = { ts: now, data };
@@ -963,18 +1116,39 @@ function buildWeatherContent(cityName, data, weatherView) {
   frag.appendChild(cur);
 
   // Stats row
-  const stats = el('div', { style: 'display:flex;gap:6px;margin-bottom:12px' });
+  const stats = el('div', { style: 'display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap' });
   [
     { icon:'💧', val:`${c.relative_humidity_2m}%`, label:'Humidity' },
     { icon:'💨', val:`${Math.round(c.wind_speed_10m)} mph`, label:'Wind' },
     { icon:'🌧', val:`${c.precipitation_probability ?? 0}%`, label:'Rain' },
   ].forEach(s => {
-    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
+    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center;min-width:70px' });
     stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
     stat.appendChild(el('div', { style: 'font-size:12px;font-weight:700;color:#ddd;margin-bottom:2px' }, s.val));
     stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
     stats.appendChild(stat);
   });
+
+  // Sunrise/Sunset from daily[0]
+  if (data.daily && data.daily.sunrise && data.daily.sunrise[0] && data.daily.sunset && data.daily.sunset[0]) {
+    const fmtTime = t => {
+      const parts = t.slice(11,16).split(':');
+      let h = parseInt(parts[0]); const m = parts[1];
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return `${h}:${m} ${ampm}`;
+    };
+    [
+      { icon:'🌅', val: fmtTime(data.daily.sunrise[0]), label:'Sunrise' },
+      { icon:'🌇', val: fmtTime(data.daily.sunset[0]),  label:'Sunset'  },
+    ].forEach(s => {
+      const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center;min-width:70px' });
+      stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
+      stat.appendChild(el('div', { style: 'font-size:12px;font-weight:700;color:#ddd;margin-bottom:2px' }, s.val));
+      stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
+      stats.appendChild(stat);
+    });
+  }
   frag.appendChild(stats);
 
   // View switcher
