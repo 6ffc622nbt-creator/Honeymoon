@@ -1500,7 +1500,7 @@ function renderAddCityModal() {
       days: [] };
     state.data.cities.push(newCity);
     state.activeCityId = newCity.id;
-    save(); closeModal();
+    save(); closeModal(); render();
   });
   footer.appendChild(cancel);
   footer.appendChild(add);
