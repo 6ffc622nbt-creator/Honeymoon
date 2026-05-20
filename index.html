@@ -381,21 +381,34 @@ function save() {
 
 // Listen for real-time updates from Firebase
 function startFirebaseSync() {
-  DATA_REF.on('value', snapshot => {
-    const data = snapshot.val();
-    if (data) {
-      // Merge incoming data preserving local UI state
-      state.data = data;
-      if (!state.activeCityId || !state.data.cities.find(c => c.id === state.activeCityId)) {
-        state.activeCityId = state.data.cities[0]?.id || null;
+  try {
+    DATA_REF.on('value', snapshot => {
+      try {
+        const data = snapshot.val();
+        if (data) {
+          state.data = data;
+          if (!state.activeCityId || !state.data.cities.find(c => c.id === state.activeCityId)) {
+            state.activeCityId = state.data.cities[0]?.id || null;
+          }
+        } else {
+          DATA_REF.set(state.data);
+        }
+        firebaseInitialized = true;
+        if (authState.viewed) render();
+        else render();
+      } catch(e) {
+        console.error('Firebase data error:', e);
+        if (!firebaseInitialized) { firebaseInitialized = true; render(); }
       }
-      if (authState.viewed) render();
-    } else {
-      // No data in Firebase yet — push our defaults
-      DATA_REF.set(state.data);
-    }
+    }, error => {
+      console.error('Firebase connection error:', error);
+      if (!firebaseInitialized) { firebaseInitialized = true; render(); }
+    });
+  } catch(e) {
+    console.error('Firebase init error:', e);
     firebaseInitialized = true;
-  });
+    render();
+  }
 }
 
 function flashSaved() {
@@ -1851,14 +1864,14 @@ try {
   // Start Firebase sync
   startFirebaseSync();
 
-  // Fallback after 3 seconds if Firebase hasn't responded
+  // Fallback after 2 seconds if Firebase hasn't responded
   setTimeout(() => {
     if (!firebaseInitialized) {
       console.warn('Firebase timeout — rendering with default data');
       firebaseInitialized = true;
       render();
     }
-  }, 3000);
+  }, 2000);
 } catch(e) {
   console.error('Boot error:', e);
   render();
