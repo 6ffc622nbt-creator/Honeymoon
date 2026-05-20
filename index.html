@@ -1034,9 +1034,17 @@ async function fetchWeather(cityName) {
   try {
     const coords = await getCoords(cityName);
     if (!coords) return null;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&forecast_days=5&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,precipitation_probability,uv_index&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=5&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch`;
     const res = await fetch(url);
     const data = await res.json();
+
+    // Fetch air quality + pollen separately from Open-Meteo AQI endpoint
+    try {
+      const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=us_aqi,grass_pollen,tree_pollen,weed_pollen&timezone=auto`;
+      const aqiRes = await fetch(aqiUrl);
+      const aqiData = await aqiRes.json();
+      data.airQuality = aqiData.current;
+    } catch(e) { data.airQuality = null; }
     weatherCache[cityName] = { ts: now, data };
     return data;
   } catch(e) {
@@ -1115,21 +1123,23 @@ function buildWeatherContent(cityName, data, weatherView) {
   cur.appendChild(curRight);
   frag.appendChild(cur);
 
-  // Stats row
-  const stats = el('div', { style: 'display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap' });
+  // Stats row — top row: humidity, wind, rain
+  const stats = el('div', { style: 'margin-bottom:8px' });
+  const statsRow1 = el('div', { style: 'display:flex;gap:6px;margin-bottom:6px' });
   [
     { icon:'💧', val:`${c.relative_humidity_2m}%`, label:'Humidity' },
     { icon:'💨', val:`${Math.round(c.wind_speed_10m)} mph`, label:'Wind' },
     { icon:'🌧', val:`${c.precipitation_probability ?? 0}%`, label:'Rain' },
   ].forEach(s => {
-    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center;min-width:70px' });
+    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
     stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
     stat.appendChild(el('div', { style: 'font-size:12px;font-weight:700;color:#ddd;margin-bottom:2px' }, s.val));
     stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
-    stats.appendChild(stat);
+    statsRow1.appendChild(stat);
   });
+  stats.appendChild(statsRow1);
 
-  // Sunrise/Sunset from daily[0]
+  // Bottom row: sunrise and sunset
   if (data.daily && data.daily.sunrise && data.daily.sunrise[0] && data.daily.sunset && data.daily.sunset[0]) {
     const fmtTime = t => {
       const parts = t.slice(11,16).split(':');
@@ -1138,17 +1148,53 @@ function buildWeatherContent(cityName, data, weatherView) {
       h = h % 12 || 12;
       return `${h}:${m} ${ampm}`;
     };
+    const statsRow2 = el('div', { style: 'display:flex;gap:6px' });
     [
       { icon:'🌅', val: fmtTime(data.daily.sunrise[0]), label:'Sunrise' },
       { icon:'🌇', val: fmtTime(data.daily.sunset[0]),  label:'Sunset'  },
     ].forEach(s => {
-      const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center;min-width:70px' });
+      const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
       stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
       stat.appendChild(el('div', { style: 'font-size:12px;font-weight:700;color:#ddd;margin-bottom:2px' }, s.val));
       stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
-      stats.appendChild(stat);
+      statsRow2.appendChild(stat);
     });
+    stats.appendChild(statsRow2);
   }
+
+  // Row 3: UV index, AQI, pollen
+  const statsRow3 = el('div', { style: 'display:flex;gap:6px;margin-top:6px' });
+  const uvMax = (data.daily && data.daily.uv_index_max && data.daily.uv_index_max[0] != null)
+    ? data.daily.uv_index_max[0]
+    : (c.uv_index != null ? c.uv_index : null);
+  const uvLabel = uvMax === null ? '–' : uvMax <= 2 ? 'Low' : uvMax <= 5 ? 'Moderate' : uvMax <= 7 ? 'High' : uvMax <= 10 ? 'Very High' : 'Extreme';
+  const uvColor = uvMax === null ? '#555' : uvMax <= 2 ? '#7AC67A' : uvMax <= 5 ? '#E8C84A' : uvMax <= 7 ? '#E8624A' : '#cc5555';
+
+  const aqi = data.airQuality;
+  const aqiVal = aqi && aqi.us_aqi != null ? aqi.us_aqi : null;
+  const aqiLabel = aqiVal === null ? '–' : aqiVal <= 50 ? 'Good' : aqiVal <= 100 ? 'Moderate' : aqiVal <= 150 ? 'Unhealthy*' : 'Unhealthy';
+  const aqiColor = aqiVal === null ? '#555' : aqiVal <= 50 ? '#7AC67A' : aqiVal <= 100 ? '#E8C84A' : '#E8624A';
+
+  const grassPollen = aqi && aqi.grass_pollen != null ? aqi.grass_pollen : null;
+  const treePollen  = aqi && aqi.tree_pollen  != null ? aqi.tree_pollen  : null;
+  const weedPollen  = aqi && aqi.weed_pollen  != null ? aqi.weed_pollen  : null;
+  const maxPollen = (grassPollen !== null && treePollen !== null && weedPollen !== null)
+    ? Math.max(grassPollen, treePollen, weedPollen) : null;
+  const pollenLabel = maxPollen === null ? '–' : maxPollen <= 10 ? 'Low' : maxPollen <= 50 ? 'Moderate' : maxPollen <= 200 ? 'High' : 'Very High';
+  const pollenColor = maxPollen === null ? '#555' : maxPollen <= 10 ? '#7AC67A' : maxPollen <= 50 ? '#E8C84A' : '#E8624A';
+
+  [
+    { icon:'☀️', val: uvMax !== null ? `UV ${Math.round(uvMax)}` : '–', label: uvLabel, color: uvColor },
+    { icon:'💨', val: aqiVal !== null ? `AQI ${aqiVal}` : '–',         label: aqiLabel, color: aqiColor },
+    { icon:'🌿', val: pollenLabel,                                       label: 'Pollen',  color: pollenColor },
+  ].forEach(s => {
+    const stat = el('div', { style: 'flex:1;background:#111;border:1px solid #1e1e26;border-radius:10px;padding:8px 6px;text-align:center' });
+    stat.appendChild(el('div', { style: 'font-size:15px;margin-bottom:3px' }, s.icon));
+    stat.appendChild(el('div', { style: `font-size:12px;font-weight:700;color:${s.color};margin-bottom:2px` }, s.val));
+    stat.appendChild(el('div', { style: 'font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.5px' }, s.label));
+    statsRow3.appendChild(stat);
+  });
+  stats.appendChild(statsRow3);
   frag.appendChild(stats);
 
   // View switcher
