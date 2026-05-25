@@ -2023,9 +2023,11 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
     const daySelect = document.createElement('select');
     daySelect.className = 'form-select';
     daySelect.setAttribute('style', 'flex:1');
-    city.days.forEach(d => {
-      const label = d.date ? `${d.date}${d.label ? ' — ' + d.label : ''}` : (d.label || 'Unnamed Day');
-      const o = el('option', { value: d.id }, label);
+    city.days.forEach((d, i) => {
+      const dayNum = `Day ${i + 1}`;
+      const dateStr = d.date ? ` · ${d.date}` : '';
+      const labelStr = d.label ? ` — ${d.label}` : '';
+      const o = el('option', { value: d.id }, `${dayNum}${dateStr}${labelStr}`);
       daySelect.appendChild(o);
     });
     dayRow.appendChild(daySelect);
