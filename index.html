@@ -2016,7 +2016,8 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
   // ── Add to Day ──
   if (city.days && city.days.length > 0) {
     const addDayWrap = el('div', { style: 'margin-top:14px;padding-top:14px;border-top:1px solid #1e1e26' });
-    addDayWrap.appendChild(el('div', { style: 'font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#666;font-weight:600;margin-bottom:8px' }, 'Add to Itinerary'));
+    addDayWrap.appendChild(el('div', { style: `font-size:13px;font-weight:700;color:${city.color};margin-bottom:4px` }, '📅 Add as Activity to a Day'));
+    addDayWrap.appendChild(el('div', { style: 'font-size:11px;color:#555;margin-bottom:10px' }, 'This will create a new activity in your itinerary for the selected day.'));
 
     const dayRow = el('div', { style: 'display:flex;gap:8px;align-items:center' });
 
@@ -2032,7 +2033,7 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
     });
     dayRow.appendChild(daySelect);
 
-    const addToDayBtn = makeBtn('+ Add', city.color, true);
+    const addToDayBtn = makeBtn('+ Add to Day', city.color, true);
     addToDayBtn.addEventListener('click', () => {
       const selectedDay = city.days.find(d => d.id === daySelect.value);
       if (!selectedDay) return;
@@ -2050,8 +2051,7 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
       selectedDay.activities.push(newAct);
       sortActivities(selectedDay);
       save();
-      // Flash confirmation then close modal
-      addToDayBtn.textContent = '✓ Added!';
+      addToDayBtn.textContent = '✓ Added to Day!';
       addToDayBtn.style.background = '#7AC67A';
       setTimeout(() => {
         closeModal();
