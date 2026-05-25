@@ -850,7 +850,7 @@ function renderApp() {
 
   // Lock/unlock button
   const lockBtn = el('button', { style: `background:none;border:1px solid ${authState.editing ? '#7AC67A' : '#333'};border-radius:8px;color:${authState.editing ? '#7AC67A' : '#555'};padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:10px` },
-    authState.editing ? '✏️ Editing' : '🔒 View Only');
+    authState.editing ? '✏️ Exit Edit' : '🔒 View Only');
   lockBtn.addEventListener('click', () => {
     if (authState.editing) {
       authState.editing = false;
@@ -1635,6 +1635,7 @@ function renderActivity(city, day, act) {
       const upBtn = el('button', { className: 'icon-btn', style: 'font-size:13px;padding:2px 5px;' }, '▲');
       upBtn.addEventListener('click', e => {
         e.stopPropagation();
+        suppressNextSync = true;
         acts.splice(idx, 1);
         acts.splice(idx - 1, 0, act);
         save(); render();
@@ -1643,3 +1644,936 @@ function renderActivity(city, day, act) {
     } else {
       rightSide.appendChild(el('div', { style: 'width:24px' }));
     }
+
+    // Down button
+    if (idx < acts.length - 1) {
+      const downBtn = el('button', { className: 'icon-btn', style: 'font-size:13px;padding:2px 5px;' }, '▼');
+      downBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        suppressNextSync = true;
+        acts.splice(idx, 1);
+        acts.splice(idx + 1, 0, act);
+        save(); render();
+      });
+      rightSide.appendChild(downBtn);
+    } else {
+      rightSide.appendChild(el('div', { style: 'width:24px' }));
+    }
+
+    const editBtn = el('button', { className: 'icon-btn' }, '✏️');
+    editBtn.addEventListener('click', e => { e.stopPropagation(); openModal('editActivity', { cityId: city.id, dayId: day.id, activity: act }); });
+    rightSide.appendChild(editBtn);
+  }
+
+  if (canExpand) {
+    const chev = el('span', { style: 'color:#555;font-size:11px;padding:2px 4px;cursor:pointer' }, isOpen ? '▾' : '▸');
+    chev.addEventListener('click', e => {
+      e.stopPropagation();
+      state.openPanels[panelKey] = !isOpen;
+      render();
+    });
+    rightSide.appendChild(chev);
+  }
+  row.appendChild(rightSide);
+
+  if (canExpand) {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', () => {
+      state.openPanels[panelKey] = !isOpen;
+      render();
+    });
+  }
+
+  wrapper.appendChild(row);
+
+  if (isOpen && canExpand) {
+    const details = el('div', { style: `background:#111;border:1px solid ${city.color}55;border-top:none;border-radius:0 0 10px 10px;padding:10px 14px` });
+    if (act.address) {
+      const addrLabel = el('div', { style: 'font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#666;margin-bottom:4px' }, 'Address');
+      details.appendChild(addrLabel);
+
+      const allAddresses = [
+        { label: act.addressLabel || null, addr: act.address },
+        ...((act.extraAddresses || []))
+      ];
+
+      allAddresses.forEach(({ label: addrName, addr }) => {
+        const addrWrap = el('div', { style: 'margin-bottom:8px' });
+        if (addrName) addrWrap.appendChild(el('div', { style: 'font-size:11px;color:#666;margin-bottom:2px' }, addrName));
+        addrWrap.appendChild(el('div', { style: 'font-size:13px;color:#ddd;margin-bottom:4px' }, addr));
+        const mapBtns = el('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' });
+        const encoded = encodeURIComponent(addr);
+        [
+          { label: '🗺 Google', href: `https://www.google.com/maps/dir/?api=1&destination=${encoded}` },
+          { label: '🍎 Apple',  href: `http://maps.apple.com/?daddr=${encoded}` },
+          { label: '🔵 Waze',   href: `https://waze.com/ul?q=${encoded}&navigate=yes` },
+        ].forEach(m => {
+          const btn = document.createElement('a');
+          btn.setAttribute('href', m.href);
+          btn.setAttribute('target', '_blank');
+          btn.setAttribute('rel', 'noopener noreferrer');
+          btn.setAttribute('style', 'font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;background:#1e1e28;border:1px solid #333;color:#aaa;text-decoration:none;white-space:nowrap;display:inline-block;');
+          btn.textContent = m.label;
+          mapBtns.appendChild(btn);
+        });
+        addrWrap.appendChild(mapBtns);
+        details.appendChild(addrWrap);
+      });
+    }
+    if (act.notes) {
+      const notesEl = el('div', { style: 'color:#bbb;font-size:13px;line-height:1.6;white-space:pre-wrap' }, act.notes);
+      details.appendChild(notesEl);
+    }
+    if (act.link) {
+      const link = document.createElement('a');
+      link.setAttribute('href', act.link);
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      link.setAttribute('style', `color:${city.color};margin-top:6px;display:block;font-size:12px;text-decoration:none`);
+      link.textContent = '🔗 ' + act.link.replace(/^https?:\/\//, '').slice(0, 50);
+      details.appendChild(link);
+    }
+    // Attachments
+    if (act.files && act.files.length > 0) {
+      const attLabel = el('div', { style: 'font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#666;margin-bottom:6px;margin-top:8px' }, 'Attachments');
+      details.appendChild(attLabel);
+      const attRow = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px' });
+      act.files.forEach(f => {
+        const thumb = el('div', { style: 'cursor:pointer;position:relative' });
+
+        if (f.type && f.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.setAttribute('style', 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #333;display:block');
+          img.src = f.url || f.data || '';
+          thumb.appendChild(img);
+          thumb.addEventListener('click', () => openFileViewer(f));
+        } else {
+          thumb.setAttribute('style', 'cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;width:70px;height:70px;border-radius:8px;border:1px solid #333;background:#1e1e28;gap:4px');
+          const icon = el('div', {}, '📄');
+          icon.style.fontSize = '24px';
+          const label = el('div', {}, (f.name || 'file').slice(0, 12));
+          label.style.cssText = 'font-size:9px;color:#888;text-align:center;word-break:break-all;padding:0 4px';
+          thumb.appendChild(icon);
+          thumb.appendChild(label);
+          thumb.addEventListener('click', () => openFileViewer(f));
+        }
+        attRow.appendChild(thumb);
+      });
+      details.appendChild(attRow);
+    }
+    // Delete only shown in edit mode
+    if (authState.editing) {
+      const delRow = el('div', { style: 'margin-top:10px;padding-top:8px;border-top:1px solid #1e1e26;display:flex;justify-content:flex-end' });
+      const delBtn = el('button', { style: 'background:none;border:1px solid #3a1a1a;border-radius:6px;color:#884444;font-size:12px;padding:5px 12px;cursor:pointer;' }, '🗑 Delete');
+      let confirmPending = false;
+      delBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!confirmPending) {
+          confirmPending = true;
+          delBtn.textContent = 'Tap again to confirm';
+          delBtn.style.background = '#3a1a1a';
+          delBtn.style.color = '#cc5555';
+          delBtn.style.borderColor = '#cc5555';
+          setTimeout(() => {
+            confirmPending = false;
+            if (delBtn.isConnected) {
+              delBtn.textContent = '🗑 Delete';
+              delBtn.style.background = 'none';
+              delBtn.style.color = '#884444';
+              delBtn.style.borderColor = '#3a1a1a';
+            }
+          }, 3000);
+        } else {
+          day.activities = day.activities.filter(a => a.id !== act.id);
+          save(); render();
+        }
+      });
+      delRow.appendChild(delBtn);
+      details.appendChild(delRow);
+    }
+    wrapper.appendChild(details);
+  }
+
+  return wrapper;
+}
+
+// ── Modals ──
+function openModal(type, payload = {}) {
+  state.modal = { type, payload };
+  render();
+}
+
+function closeModal() {
+  state.modal = null;
+  render();
+}
+
+function renderModal() {
+  const { type, payload } = state.modal;
+  const overlay = el('div', { className: 'modal-overlay' });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  const modal = el('div', { className: 'modal' });
+
+  if (type === 'addCity') modal.appendChild(renderAddCityModal());
+  else if (type === 'editCity') modal.appendChild(renderEditCityModal(payload.city));
+  else if (type === 'addDay') modal.appendChild(renderAddDayModal(payload.cityId));
+  else if (type === 'editDay') modal.appendChild(renderEditDayModal(payload.cityId, payload.dayId));
+  else if (type === 'editActivity') modal.appendChild(renderActivityModal(payload));
+  else if (type === 'editTransport') modal.appendChild(renderTransportModal(payload.cityId));
+  else if (type === 'editAccom') modal.appendChild(renderAccomModal(payload.cityId));
+  else if (type === 'editThingToDo') modal.appendChild(renderThingToDoModal(payload));
+
+  overlay.appendChild(modal);
+  return overlay;
+}
+
+function renderAddCityModal() {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Add City'));
+  let name = '', color = COLORS[state.data.cities.length % COLORS.length];
+
+  const nameGroup = formGroup('City Name');
+  const nameInp = formInput('text', '', 'e.g. Tokyo, Venice…');
+  nameInp.addEventListener('input', e => { name = e.target.value; });
+  nameGroup.appendChild(nameInp);
+  frag.appendChild(nameGroup);
+
+  const colorGroup = formGroup('Color');
+  const picker = el('div', { className: 'color-picker' });
+  COLORS.forEach(c => {
+    const swatch = el('div', { className: 'color-swatch' + (c === color ? ' selected' : ''), style: `background:${c}` });
+    swatch.addEventListener('click', () => {
+      color = c;
+      picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+    });
+    picker.appendChild(swatch);
+  });
+  colorGroup.appendChild(picker);
+  frag.appendChild(colorGroup);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const add = makeBtn('Add City', color);
+  add.addEventListener('click', () => {
+    if (!name.trim()) return;
+    const newCity = { id: genId(), name: name.trim(), color,
+      thingsToDo: { eat: [], see: [], buy: [] },
+      transport: { type:'Flight', operator:'', flightNumber:'', departure:'', arrival:'', departureTime:'', arrivalTime:'', confirmation:'', notes:'' },
+      accommodation: { name:'', address:'', doorCode:'', checkIn:'', checkOut:'', confirmationNumber:'', wifiName:'', wifiPassword:'', notes:'' },
+      days: [] };
+    state.data.cities.push(newCity);
+    state.activeCityId = newCity.id;
+    save(); closeModal(); render();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(add);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderEditCityModal(city) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Edit City'));
+  let name = city.name, color = city.color;
+
+  const nameGroup = formGroup('City Name');
+  const nameInp = formInput('text', city.name, 'City name');
+  nameInp.addEventListener('input', e => { name = e.target.value; });
+  nameGroup.appendChild(nameInp);
+  frag.appendChild(nameGroup);
+
+  const colorGroup = formGroup('Color');
+  const picker = el('div', { className: 'color-picker' });
+  COLORS.forEach(c => {
+    const swatch = el('div', { className: 'color-swatch' + (c === color ? ' selected' : ''), style: `background:${c}` });
+    swatch.addEventListener('click', () => {
+      color = c;
+      picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+    });
+    picker.appendChild(swatch);
+  });
+  colorGroup.appendChild(picker);
+  frag.appendChild(colorGroup);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', color);
+  save_.addEventListener('click', () => {
+    city.name = name.trim() || city.name;
+    city.color = color;
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  if (!city.thingsToDo) city.thingsToDo = { eat: [], see: [], buy: [] };
+  const editing = item !== undefined;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, editing ? `✏️ Edit — ${catLabel}` : `+ Add — ${catLabel}`));
+
+  let form = editing ? { ...item } : { name: '', notes: '', address: '' };
+
+  // ── Name field with Nominatim autocomplete ──
+  const ng = formGroup('Name');
+  const nameWrap = el('div', { style: 'position:relative' });
+  const ni = formInput('text', form.name || '', 'e.g. Da Enzo al 29');
+
+  // Address field declared here so autocomplete can reference it
+  const ag = formGroup('Address (optional — opens in maps)');
+  const ai = formInput('text', form.address || '', 'e.g. Via dei Vascellari, Rome');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+
+  ni.addEventListener('input', e => {
+    form.name = e.target.value;
+    scheduleSearch(e.target.value);
+  });
+  nameWrap.appendChild(ni);
+
+  // Autocomplete dropdown
+  const dropdown = el('div', { style: 'display:none;position:absolute;top:100%;left:0;right:0;background:#1C1C22;border:1px solid #2a2a35;border-radius:0 0 8px 8px;z-index:600;max-height:200px;overflow-y:auto;' });
+  nameWrap.appendChild(dropdown);
+  ng.appendChild(nameWrap);
+  frag.appendChild(ng);
+
+  let searchTimer = null;
+  function scheduleSearch(query) {
+    clearTimeout(searchTimer);
+    dropdown.style.display = 'none';
+    if (query.length < 3) return;
+    searchTimer = setTimeout(() => doSearch(query), 500);
+  }
+
+  async function doSearch(query) {
+    try {
+      const cityCoords = CITY_COORDS[city.name];
+      const viewbox = cityCoords
+        ? `&viewbox=${cityCoords.lon - 0.3},${cityCoords.lat + 0.3},${cityCoords.lon + 0.3},${cityCoords.lat - 0.3}&bounded=0`
+        : '';
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' ' + city.name)}&format=json&limit=5&addressdetails=1${viewbox}`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const results = await res.json();
+      showSuggestions(results);
+    } catch(e) {
+      dropdown.style.display = 'none';
+    }
+  }
+
+  function showSuggestions(results) {
+    while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+    if (!results || results.length === 0) { dropdown.style.display = 'none'; return; }
+    results.forEach(r => {
+      const item_ = el('div', { style: 'padding:10px 12px;font-size:13px;color:#eee;cursor:pointer;border-bottom:1px solid #2a2a35' });
+      const nameText = r.name || r.display_name.split(',')[0];
+      const addrText = r.display_name;
+      item_.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, nameText));
+      item_.appendChild(el('div', { style: 'font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, addrText));
+      // Prevent blur from hiding dropdown before selection
+      item_.addEventListener('mousedown', e => e.preventDefault());
+      // Use touchend for iOS full screen web app mode
+      item_.addEventListener('touchend', e => {
+        e.preventDefault();
+        form.name = nameText;
+        form.address = addrText;
+        ni.value = nameText;
+        ai.value = addrText;
+        dropdown.style.display = 'none';
+      });
+      // Click for desktop
+      item_.addEventListener('click', () => {
+        form.name = nameText;
+        form.address = addrText;
+        ni.value = nameText;
+        ai.value = addrText;
+        dropdown.style.display = 'none';
+      });
+      // Hover highlight — works on desktop; skipped on mobile (touch handles it)
+      item_.addEventListener('mouseover', () => { item_.style.background = '#2a2a35'; });
+      item_.addEventListener('mouseout',  () => { item_.style.background = ''; });
+      dropdown.appendChild(item_);
+    });
+    dropdown.style.display = 'block';
+  }
+
+  ni.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
+
+  const notg = formGroup('Notes (optional)');
+  const nota = el('textarea', { className: 'form-textarea', placeholder: 'Opening hours, price range, tips…' });
+  nota.value = form.notes || '';
+  nota.addEventListener('input', e => { form.notes = e.target.value; });
+  notg.appendChild(nota); frag.appendChild(notg);
+
+  // Address field appended after notes
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  // ── Add to Day ──
+  if (city.days && city.days.length > 0) {
+    const addDayWrap = el('div', { style: 'margin-top:14px;padding-top:14px;border-top:1px solid #1e1e26' });
+    addDayWrap.appendChild(el('div', { style: 'font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#666;font-weight:600;margin-bottom:8px' }, 'Add to Itinerary'));
+
+    const dayRow = el('div', { style: 'display:flex;gap:8px;align-items:center' });
+
+    const daySelect = document.createElement('select');
+    daySelect.className = 'form-select';
+    daySelect.setAttribute('style', 'flex:1');
+    city.days.forEach(d => {
+      const label = d.date ? `${d.date}${d.label ? ' — ' + d.label : ''}` : (d.label || 'Unnamed Day');
+      const o = el('option', { value: d.id }, label);
+      daySelect.appendChild(o);
+    });
+    dayRow.appendChild(daySelect);
+
+    const addToDayBtn = makeBtn('+ Add', city.color, true);
+    addToDayBtn.addEventListener('click', () => {
+      const selectedDay = city.days.find(d => d.id === daySelect.value);
+      if (!selectedDay) return;
+      if (!form.name.trim()) { ni.focus(); return; }
+      const newAct = {
+        id: genId(),
+        title: form.name,
+        time: '',
+        duration: '',
+        address: form.address || '',
+        notes: form.notes || '',
+        link: '',
+        files: [],
+      };
+      selectedDay.activities.push(newAct);
+      sortActivities(selectedDay);
+      save();
+      // Flash confirmation then close modal
+      addToDayBtn.textContent = '✓ Added!';
+      addToDayBtn.style.background = '#7AC67A';
+      setTimeout(() => {
+        closeModal();
+        render();
+      }, 1000);
+    });
+    dayRow.appendChild(addToDayBtn);
+    addDayWrap.appendChild(dayRow);
+    frag.appendChild(addDayWrap);
+  }
+
+  // Delete option if editing
+  if (editing) {
+    const delWrap = el('div', { style: 'margin-top:16px;padding-top:14px;border-top:1px solid #1e1e26' });
+    const delBtn = el('button', { style: 'width:100%;background:none;border:1px solid #3a1a1a;border-radius:8px;color:#884444;font-size:13px;padding:10px;cursor:pointer;' }, '🗑 Remove This Item');
+    let confirmPending = false;
+    delBtn.addEventListener('click', () => {
+      if (!confirmPending) {
+        confirmPending = true;
+        delBtn.textContent = 'Tap again to confirm';
+        delBtn.style.background = '#3a1a1a';
+        delBtn.style.color = '#cc5555';
+        delBtn.style.borderColor = '#cc5555';
+        setTimeout(() => {
+          confirmPending = false;
+          if (delBtn.isConnected) {
+            delBtn.textContent = '🗑 Remove This Item';
+            delBtn.style.background = 'none';
+            delBtn.style.color = '#884444';
+            delBtn.style.borderColor = '#3a1a1a';
+          }
+        }, 3000);
+      } else {
+        city.thingsToDo[category].splice(idx, 1);
+        save(); closeModal(); render();
+      }
+    });
+    delWrap.appendChild(delBtn);
+    frag.appendChild(delWrap);
+  }
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn(editing ? 'Save' : 'Add', city.color);
+  save_.addEventListener('click', () => {
+    if (!form.name.trim()) return;
+    if (editing) {
+      city.thingsToDo[category][idx] = { ...form };
+    } else {
+      city.thingsToDo[category].push({ ...form });
+    }
+    save(); closeModal(); render();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderEditDayModal(cityId, dayId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const day = city.days.find(d => d.id === dayId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '✏️ Edit Day'));
+
+  // Date field
+  const dg = formGroup('Date');
+  const di = formInput('date', day.date || '');
+  di.addEventListener('change', e => {
+    day.date = e.target.value;
+    city.days.sort((a,b) => a.date.localeCompare(b.date));
+    save();
+    // No render here — user is still in the modal
+  });
+  dg.appendChild(di);
+  frag.appendChild(dg);
+
+  // Delete day section
+  const delWrap = el('div', { style: 'margin-top:20px;padding-top:16px;border-top:1px solid #1e1e26' });
+  delWrap.appendChild(el('div', { style: 'font-size:12px;color:#555;margin-bottom:10px' }, 'Danger zone'));
+
+  const delBtn = el('button', { style: 'width:100%;background:none;border:1px solid #3a1a1a;border-radius:8px;color:#884444;font-size:14px;padding:12px;cursor:pointer;' }, '🗑 Remove This Day');
+  let confirmPending = false;
+  delBtn.addEventListener('click', () => {
+    if (!confirmPending) {
+      confirmPending = true;
+      delBtn.textContent = 'Tap again to confirm removal';
+      delBtn.style.background = '#3a1a1a';
+      delBtn.style.color = '#cc5555';
+      delBtn.style.borderColor = '#cc5555';
+      setTimeout(() => {
+        confirmPending = false;
+        if (delBtn.isConnected) {
+          delBtn.textContent = '🗑 Remove This Day';
+          delBtn.style.background = 'none';
+          delBtn.style.color = '#884444';
+          delBtn.style.borderColor = '#3a1a1a';
+        }
+      }, 3000);
+    } else {
+      city.days = city.days.filter(d => d.id !== dayId);
+      save(); closeModal(); render();
+    }
+  });
+  delWrap.appendChild(delBtn);
+  frag.appendChild(delWrap);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Done', null, false, 'secondary');
+  cancel.addEventListener('click', () => { closeModal(); save(); render(); });
+  footer.appendChild(cancel);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderAddDayModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, 'Add Day'));
+  let date = '', label = '';
+
+  const dg = formGroup('Date');
+  const di = formInput('date', '');
+  di.addEventListener('change', e => { date = e.target.value; });
+  dg.appendChild(di);
+  frag.appendChild(dg);
+
+  const lg = formGroup('Label (optional)');
+  const li = formInput('text', '', 'e.g. Arrival, Beach Day…');
+  li.addEventListener('input', e => { label = e.target.value; });
+  lg.appendChild(li);
+  frag.appendChild(lg);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const add = makeBtn('Add Day', city.color);
+  add.addEventListener('click', () => {
+    if (!date) return;
+    city.days.push({ id: genId(), date, label, activities: [] });
+    city.days.sort((a,b) => a.date.localeCompare(b.date));
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(add);
+  frag.appendChild(footer);
+  return frag;
+}
+
+// ── Activity Sort ──
+function parseTimeToMins(timeStr) {
+  if (!timeStr) return Infinity;
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return Infinity;
+  let h = parseInt(match[1]);
+  const m = parseInt(match[2]);
+  const ampm = match[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+function sortActivities(day) {
+  // Only sort activities that have a time — untimed stay at the bottom
+  day.activities.sort((a, b) => {
+    const ta = parseTimeToMins(a.time);
+    const tb = parseTimeToMins(b.time);
+    return ta - tb;
+  });
+}
+
+function renderActivityModal({ cityId, dayId, activity }) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const day = city.days.find(d => d.id === dayId);
+  const editing = !!activity;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, editing ? 'Edit Activity' : 'Add Activity'));
+
+  let form = editing
+    ? { ...activity, duration: activity.duration || '', files: activity.files ? activity.files.map(f => ({...f})) : [] }
+    : { time: '', duration: '', title: '', address: '', notes: '', link: '', files: [] };
+
+  const grid = el('div', { className: 'grid-2' });
+
+  const tg = formGroup('Start Time (e.g. 2:30 PM)');
+  const ti = formInput('text', form.time || '', '2:30 PM');
+  ti.addEventListener('input', e => { form.time = e.target.value; updatePreview(); });
+  tg.appendChild(ti); grid.appendChild(tg);
+
+  const ttg = formGroup('Title');
+  const tti = formInput('text', form.title || '', 'e.g. Visit the Colosseum');
+  tti.addEventListener('input', e => { form.title = e.target.value; });
+  ttg.appendChild(tti); grid.appendChild(ttg);
+  frag.appendChild(grid);
+
+  // Duration + end time preview row
+  const durGrid = el('div', { className: 'grid-2' });
+  const durg = formGroup('Duration (e.g. 2h, 1h 30m)');
+  const duri = formInput('text', form.duration || '', 'e.g. 1h 30m');
+  duri.addEventListener('input', e => { form.duration = e.target.value; updatePreview(); });
+  durg.appendChild(duri); durGrid.appendChild(durg);
+
+  const previewG = formGroup('End Time');
+  const previewEl = el('div', { style: 'font-size:15px;color:#aaa;padding:10px 12px;background:#111;border:1px solid #2a2a35;border-radius:8px;min-height:42px' }, '—');
+  previewG.appendChild(previewEl); durGrid.appendChild(previewG);
+  frag.appendChild(durGrid);
+
+  // Duration + end time preview uses global calcActivityEndTime
+  function updatePreview() {
+    const end = calcActivityEndTime(form.time, form.duration);
+    previewEl.textContent = end || '—';
+    previewEl.style.color = end ? '#7AC67A' : '#aaa';
+  }
+  updatePreview();
+
+  const ag = formGroup('Address (optional — opens in maps)');
+  const ai = formInput('text', form.address || '', 'e.g. Via della Muratte, Rome');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  const ng = formGroup('Notes');
+  const na = el('textarea', { className: 'form-textarea', placeholder: 'Booking info, reminders…' });
+  na.value = form.notes || '';
+  na.addEventListener('input', e => { form.notes = e.target.value; });
+  ng.appendChild(na); frag.appendChild(ng);
+
+  const lnkg = formGroup('Link (optional)');
+  const lnki = formInput('text', form.link || '', 'https://…');
+  lnki.addEventListener('input', e => { form.link = e.target.value; });
+  lnkg.appendChild(lnki); frag.appendChild(lnkg);
+
+  // ── Attachments ──
+  const fg = formGroup('Attachments (tickets, screenshots)');
+  const fileWrap = el('div', { style: 'display:flex;flex-direction:column;gap:8px' });
+  const fileListEl = el('div', { style: 'display:flex;flex-wrap:wrap;gap:8px;min-height:0' });
+
+  function renderFileThumbs() {
+    while (fileListEl.firstChild) fileListEl.removeChild(fileListEl.firstChild);
+    (form.files || []).forEach((f, i) => {
+      const thumb = el('div', { style: 'position:relative;display:inline-block' });
+      if (f.type && f.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.setAttribute('style', 'width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #333');
+        img.src = f.url || f.data || '';
+        thumb.appendChild(img);
+      } else {
+        thumb.appendChild(el('div', { style: 'width:60px;height:60px;border-radius:6px;border:1px solid #333;background:#1e1e28;display:flex;align-items:center;justify-content:center;font-size:24px' }, '📄'));
+      }
+      const removeBtn = el('button', { style: 'position:absolute;top:-6px;right:-6px;background:#cc5555;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;color:#fff;cursor:pointer;line-height:1;padding:0' }, '✕');
+      removeBtn.addEventListener('click', e => {
+        e.preventDefault();
+        form.files.splice(i, 1);
+        renderFileThumbs();
+      });
+      thumb.appendChild(removeBtn);
+      fileListEl.appendChild(thumb);
+    });
+  }
+  renderFileThumbs();
+  fileWrap.appendChild(fileListEl);
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*,.pdf';
+  fileInput.multiple = true;
+  fileInput.style.cssText = 'display:none';
+  fileInput.addEventListener('change', () => {
+    const toLoad = Array.from(fileInput.files);
+    if (toLoad.length === 0) return;
+
+    uploadBtn.textContent = '⏳ Uploading…';
+    uploadBtn.style.color = '#E8624A';
+
+    let completed = 0;
+    toLoad.forEach(file => {
+      const path = `attachments/${genId()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const ref = storage.ref(path);
+      const uploadTask = ref.put(file);
+
+      uploadTask.on('state_changed',
+        null,
+        err => {
+          console.error('Upload error:', err);
+          completed++;
+          if (completed === toLoad.length) {
+            uploadBtn.textContent = '📎 Tap to attach file';
+            uploadBtn.style.color = '#888';
+            renderFileThumbs();
+          }
+        },
+        async () => {
+          const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+          if (!form.files) form.files = [];
+          form.files.push({ name: file.name, type: file.type, url: downloadURL, path });
+          completed++;
+          if (completed === toLoad.length) {
+            uploadBtn.textContent = '📎 Tap to attach file';
+            uploadBtn.style.color = '#888';
+            renderFileThumbs();
+          }
+        }
+      );
+    });
+    fileInput.value = '';
+  });
+  fileWrap.appendChild(fileInput);
+
+  const uploadBtn = el('button', { style: 'background:#1e1e28;border:1px dashed #444;border-radius:8px;color:#888;font-size:13px;padding:10px;cursor:pointer;text-align:center;width:100%' }, '📎 Tap to attach file');
+  uploadBtn.addEventListener('click', e => { e.preventDefault(); fileInput.click(); });
+  fileWrap.appendChild(uploadBtn);
+  fg.appendChild(fileWrap);
+  frag.appendChild(fg);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn(editing ? 'Save Changes' : 'Add Activity', city.color);
+  save_.addEventListener('click', () => {
+    if (!form.title.trim()) return;
+    if (editing) {
+      Object.assign(activity, form);
+    } else {
+      day.activities.push({ id: genId(), ...form });
+    }
+    sortActivities(day);
+    save(); closeModal();
+  });
+  footer.appendChild(cancel);
+  footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderTransportModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '✈️ Getting Here'));
+  const form = { ...city.transport };
+
+  const g1 = el('div', { className: 'grid-2' });
+  const tg = formGroup('Type');
+  const sel = el('select', { className: 'form-select' });
+  ['Flight','Train','Bus','Car','Ferry'].forEach(opt => {
+    const o = el('option', { value: opt }, opt);
+    if (form.type === opt) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', e => { form.type = e.target.value; });
+  tg.appendChild(sel); g1.appendChild(tg);
+  const og = formGroup('Operator / Airline'); const oi = formInput('text', form.operator || '', 'e.g. Trenitalia');
+  oi.addEventListener('input', e => { form.operator = e.target.value; });
+  og.appendChild(oi); g1.appendChild(og);
+  frag.appendChild(g1);
+
+  const g2 = el('div', { className: 'grid-2' });
+  const fg = formGroup('Flight / Train #'); const fi = formInput('text', form.flightNumber || '', 'e.g. FR4421');
+  fi.addEventListener('input', e => { form.flightNumber = e.target.value; });
+  fg.appendChild(fi); g2.appendChild(fg);
+  const cg = formGroup('Confirmation #'); const ci = formInput('text', form.confirmation || '', 'Booking ref');
+  ci.addEventListener('input', e => { form.confirmation = e.target.value; });
+  cg.appendChild(ci); g2.appendChild(cg);
+  frag.appendChild(g2);
+
+  const g3 = el('div', { className: 'grid-2' });
+  const fromG = formGroup('From'); const fromI = formInput('text', form.departure || '', 'Departing from');
+  fromI.addEventListener('input', e => { form.departure = e.target.value; });
+  fromG.appendChild(fromI); g3.appendChild(fromG);
+  const toG = formGroup('To'); const toI = formInput('text', form.arrival || '', 'Arriving at');
+  toI.addEventListener('input', e => { form.arrival = e.target.value; });
+  toG.appendChild(toI); g3.appendChild(toG);
+  frag.appendChild(g3);
+
+  const g4 = el('div', { className: 'grid-2' });
+  const depG = formGroup('Departure Date/Time'); const depI = formInput('text', form.departureTime || '', 'May 20, 10:30 PM');
+  depI.addEventListener('input', e => { form.departureTime = e.target.value; });
+  depG.appendChild(depI); g4.appendChild(depG);
+  const arrG = formGroup('Arrival Date/Time'); const arrI = formInput('text', form.arrivalTime || '', 'May 21, 2:00 PM');
+  arrI.addEventListener('input', e => { form.arrivalTime = e.target.value; });
+  arrG.appendChild(arrI); g4.appendChild(arrG);
+  frag.appendChild(g4);
+
+  const ng = formGroup('Notes');
+  const na = el('textarea', { className: 'form-textarea', placeholder: 'Seat numbers, terminal, luggage info…' });
+  na.value = form.notes || '';
+  na.addEventListener('input', e => { form.notes = e.target.value; });
+  ng.appendChild(na); frag.appendChild(ng);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', city.color);
+  save_.addEventListener('click', () => { Object.assign(city.transport, form); save(); closeModal(); });
+  footer.appendChild(cancel); footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+function renderAccomModal(cityId) {
+  const city = state.data.cities.find(c => c.id === cityId);
+  const frag = document.createDocumentFragment();
+  frag.appendChild(el('h3', {}, '🏨 Accommodation'));
+  const form = { ...city.accommodation };
+
+  const g1 = el('div', { className: 'grid-2' });
+  const ng = formGroup('Name / Property'); const ni = formInput('text', form.name || '', 'e.g. Hotel Centrale');
+  ni.addEventListener('input', e => { form.name = e.target.value; });
+  ng.appendChild(ni); g1.appendChild(ng);
+  const cg = formGroup('Confirmation #'); const ci = formInput('text', form.confirmationNumber || '', 'Booking ref');
+  ci.addEventListener('input', e => { form.confirmationNumber = e.target.value; });
+  cg.appendChild(ci); g1.appendChild(cg);
+  frag.appendChild(g1);
+
+  const ag = formGroup('Address'); const ai = formInput('text', form.address || '', 'Full street address');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+  ag.appendChild(ai); frag.appendChild(ag);
+
+  const g2 = el('div', { className: 'grid-2' });
+  const inG = formGroup('Check-in'); const inI = formInput('text', form.checkIn || '', 'May 21, 3:00 PM');
+  inI.addEventListener('input', e => { form.checkIn = e.target.value; });
+  inG.appendChild(inI); g2.appendChild(inG);
+  const outG = formGroup('Check-out'); const outI = formInput('text', form.checkOut || '', 'May 22, 11:00 AM');
+  outI.addEventListener('input', e => { form.checkOut = e.target.value; });
+  outG.appendChild(outI); g2.appendChild(outG);
+  frag.appendChild(g2);
+
+  const dg = formGroup('Door / Key / Lock Code'); const di = formInput('text', form.doorCode || '', 'e.g. #1234 or lockbox code');
+  di.addEventListener('input', e => { form.doorCode = e.target.value; });
+  dg.appendChild(di); frag.appendChild(dg);
+
+  const g3 = el('div', { className: 'grid-2' });
+  const wng = formGroup('Wi-Fi Name'); const wni = formInput('text', form.wifiName || '', 'Network name');
+  wni.addEventListener('input', e => { form.wifiName = e.target.value; });
+  wng.appendChild(wni); g3.appendChild(wng);
+  const wpg = formGroup('Wi-Fi Password'); const wpi = formInput('text', form.wifiPassword || '', 'Password');
+  wpi.addEventListener('input', e => { form.wifiPassword = e.target.value; });
+  wpg.appendChild(wpi); g3.appendChild(wpg);
+  frag.appendChild(g3);
+
+  const notesG = formGroup('Other Important Info');
+  const notesA = el('textarea', { className: 'form-textarea', placeholder: 'Host contact, parking, house rules…' });
+  notesA.value = form.notes || '';
+  notesA.addEventListener('input', e => { form.notes = e.target.value; });
+  notesG.appendChild(notesA); frag.appendChild(notesG);
+
+  const oig = formGroup('Other Info (expandable section)');
+  const oia = el('textarea', { className: 'form-textarea', placeholder: 'Extra details, local tips, emergency contacts…' });
+  oia.value = form.otherInfo || '';
+  oia.addEventListener('input', e => { form.otherInfo = e.target.value; });
+  oig.appendChild(oia); frag.appendChild(oig);
+
+  const footer = el('div', { className: 'modal-footer' });
+  const cancel = makeBtn('Cancel', null, false, 'secondary');
+  cancel.addEventListener('click', closeModal);
+  const save_ = makeBtn('Save', city.color);
+  save_.addEventListener('click', () => { Object.assign(city.accommodation, form); save(); closeModal(); });
+  footer.appendChild(cancel); footer.appendChild(save_);
+  frag.appendChild(footer);
+  return frag;
+}
+
+// ── Helpers ──
+function el(tag, attrs = {}, text) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'className') e.className = v;
+    else if (k === 'style' && typeof v === 'string') e.setAttribute('style', v);
+    else if (k in e) e[k] = v;
+    else e.setAttribute(k, v);
+  });
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function formGroup(label) {
+  const g = el('div', { className: 'form-group' });
+  g.appendChild(el('label', { className: 'form-label' }, label));
+  return g;
+}
+
+function formInput(type, value, placeholder) {
+  return el('input', { type, className: 'form-input', value: value || '', placeholder: placeholder || '' });
+}
+
+function makeBtn(text, color, small = false, variant = 'primary') {
+  const btn = el('button', { className: 'btn' + (small ? ' btn-sm' : '') + (variant === 'secondary' ? ' btn-secondary' : ' btn-primary') }, text);
+  if (variant === 'primary' && color) btn.style.background = color;
+  return btn;
+}
+
+function appendInfoField(parent, label, value, mono = false) {
+  if (!value) return;
+  const field = el('div', { className: 'info-field' });
+  field.appendChild(el('div', { className: 'info-label' }, label));
+  field.appendChild(el('div', { className: 'info-value' + (mono ? ' mono' : '') }, value));
+  parent.appendChild(field);
+}
+
+// ── Boot ──
+try {
+  const app = document.getElementById('app');
+  const loading = document.createElement('div');
+  loading.setAttribute('style', 'min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0E0E12;');
+  loading.innerHTML = '<div style="font-size:48px;margin-bottom:16px">🍾</div><div style="color:#444;font-size:14px">Loading itinerary…</div>';
+  app.appendChild(loading);
+
+  // Start Firebase sync
+  startFirebaseSync();
+  initPullToRefresh();
+
+  // Fallback after 2 seconds if Firebase hasn't responded
+  setTimeout(() => {
+    if (!firebaseInitialized) {
+      console.warn('Firebase timeout — rendering with default data');
+      firebaseInitialized = true;
+      render();
+    }
+  }, 2000);
+} catch(e) {
+  console.error('Boot error:', e);
+  render();
+}
+</script>
+
+</body>
+</html>
