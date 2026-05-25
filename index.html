@@ -375,6 +375,7 @@ function loadData() {
 const undoStack = [];
 const MAX_UNDO = 20;
 let lastSavedSnapshot = null;
+let suppressNextSync = false;
 
 function pushUndo() {
   // Only push if state actually changed from last saved snapshot
@@ -413,8 +414,6 @@ function save() {
     flashSaved();
   }, 600);
 }
-
-let suppressNextSync = false;
 
 // Listen for real-time updates from Firebase
 function startFirebaseSync() {
