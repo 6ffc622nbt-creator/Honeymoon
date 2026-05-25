@@ -1830,12 +1830,39 @@ function renderAddCityModal() {
   const frag = document.createDocumentFragment();
   frag.appendChild(el('h3', {}, 'Add City'));
   let name = '', color = COLORS[state.data.cities.length % COLORS.length];
+  let startDate = '', endDate = '';
 
   const nameGroup = formGroup('City Name');
   const nameInp = formInput('text', '', 'e.g. Tokyo, Venice…');
   nameInp.addEventListener('input', e => { name = e.target.value; });
   nameGroup.appendChild(nameInp);
   frag.appendChild(nameGroup);
+
+  // Date range
+  const dateGrid = el('div', { className: 'grid-2' });
+  const startGroup = formGroup('Arrival Date');
+  const startInp = formInput('date', '');
+  startInp.addEventListener('change', e => { startDate = e.target.value; updatePreview(); });
+  startGroup.appendChild(startInp);
+  dateGrid.appendChild(startGroup);
+
+  const endGroup = formGroup('Departure Date');
+  const endInp = formInput('date', '');
+  endInp.addEventListener('change', e => { endDate = e.target.value; updatePreview(); });
+  endGroup.appendChild(endInp);
+  dateGrid.appendChild(endGroup);
+  frag.appendChild(dateGrid);
+
+  // Day preview
+  const preview = el('div', { style: 'font-size:12px;color:#555;margin-bottom:12px;min-height:18px;font-style:italic' }, '');
+  frag.appendChild(preview);
+
+  function updatePreview() {
+    if (!startDate || !endDate || endDate < startDate) { preview.textContent = ''; return; }
+    const days = getDaysBetween(startDate, endDate);
+    preview.textContent = `${days.length} day${days.length !== 1 ? 's' : ''} will be created automatically`;
+    preview.style.color = '#7AC67A';
+  }
 
   const colorGroup = formGroup('Color');
   const picker = el('div', { className: 'color-picker' });
@@ -1857,11 +1884,21 @@ function renderAddCityModal() {
   const add = makeBtn('Add City', color);
   add.addEventListener('click', () => {
     if (!name.trim()) return;
-    const newCity = { id: genId(), name: name.trim(), color,
+    // Generate days from date range
+    const dateRange = (startDate && endDate && endDate >= startDate) ? getDaysBetween(startDate, endDate) : [];
+    const days = dateRange.map((date, i) => ({
+      id: genId(),
+      date,
+      label: i === 0 ? 'Arrival' : i === dateRange.length - 1 ? 'Departure' : '',
+      activities: []
+    }));
+    const newCity = {
+      id: genId(), name: name.trim(), color,
       thingsToDo: { eat: [], see: [], buy: [] },
       transport: { type:'Flight', operator:'', flightNumber:'', departure:'', arrival:'', departureTime:'', arrivalTime:'', confirmation:'', notes:'' },
       accommodation: { name:'', address:'', doorCode:'', checkIn:'', checkOut:'', confirmationNumber:'', wifiName:'', wifiPassword:'', notes:'' },
-      days: [] };
+      days
+    };
     state.data.cities.push(newCity);
     state.activeCityId = newCity.id;
     save(); closeModal(); render();
@@ -1870,6 +1907,16 @@ function renderAddCityModal() {
   footer.appendChild(add);
   frag.appendChild(footer);
   return frag;
+}
+
+function getDaysBetween(startStr, endStr) {
+  const dates = [];
+  const start = new Date(startStr + 'T00:00:00');
+  const end = new Date(endStr + 'T00:00:00');
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
 }
 
 function renderEditCityModal(city) {
@@ -2050,6 +2097,10 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
       };
       selectedDay.activities.push(newAct);
       sortActivities(selectedDay);
+      // Remove from Things To Do only if editing an existing item
+      if (editing && idx !== undefined) {
+        city.thingsToDo[category].splice(idx, 1);
+      }
       save();
       addToDayBtn.textContent = '✓ Added to Day!';
       addToDayBtn.style.background = '#7AC67A';
