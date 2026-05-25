@@ -1627,13 +1627,44 @@ function renderActivity(city, day, act) {
   const rightSide = el('div', { style: 'display:flex;align-items:center;gap:4px;flex-shrink:0' });
 
   if (authState.editing) {
+    const acts = day.activities;
+    const idx = acts.indexOf(act);
+
+    // Up button
+    if (idx > 0) {
+      const upBtn = el('button', { className: 'icon-btn', style: 'font-size:13px;padding:2px 5px;' }, '▲');
+      upBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        acts.splice(idx, 1);
+        acts.splice(idx - 1, 0, act);
+        save(); render();
+      });
+      rightSide.appendChild(upBtn);
+    } else {
+      rightSide.appendChild(el('div', { style: 'width:24px' }));
+    }
+
+    // Down button
+    if (idx < acts.length - 1) {
+      const downBtn = el('button', { className: 'icon-btn', style: 'font-size:13px;padding:2px 5px;' }, '▼');
+      downBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        acts.splice(idx, 1);
+        acts.splice(idx + 1, 0, act);
+        save(); render();
+      });
+      rightSide.appendChild(downBtn);
+    } else {
+      rightSide.appendChild(el('div', { style: 'width:24px' }));
+    }
+
     const editBtn = el('button', { className: 'icon-btn' }, '✏️');
     editBtn.addEventListener('click', e => { e.stopPropagation(); openModal('editActivity', { cityId: city.id, dayId: day.id, activity: act }); });
     rightSide.appendChild(editBtn);
   }
 
   if (canExpand) {
-    const chev = el('span', { style: 'color:#555;font-size:11px;padding:2px 4px;cursor:pointer' }, isOpen ? '▲' : '▼');
+    const chev = el('span', { style: 'color:#555;font-size:11px;padding:2px 4px;cursor:pointer' }, isOpen ? '▾' : '▸');
     chev.addEventListener('click', e => {
       e.stopPropagation();
       state.openPanels[panelKey] = !isOpen;
@@ -1889,10 +1920,79 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
 
   let form = editing ? { ...item } : { name: '', notes: '', address: '' };
 
+  // ── Name field with Nominatim autocomplete ──
   const ng = formGroup('Name');
+  const nameWrap = el('div', { style: 'position:relative' });
   const ni = formInput('text', form.name || '', 'e.g. Da Enzo al 29');
-  ni.addEventListener('input', e => { form.name = e.target.value; });
-  ng.appendChild(ni); frag.appendChild(ng);
+
+  // Address field declared here so autocomplete can reference it
+  const ag = formGroup('Address (optional — opens in maps)');
+  const ai = formInput('text', form.address || '', 'e.g. Via dei Vascellari, Rome');
+  ai.addEventListener('input', e => { form.address = e.target.value; });
+
+  ni.addEventListener('input', e => {
+    form.name = e.target.value;
+    scheduleSearch(e.target.value);
+  });
+  nameWrap.appendChild(ni);
+
+  // Autocomplete dropdown
+  const dropdown = el('div', { style: 'display:none;position:absolute;top:100%;left:0;right:0;background:#1C1C22;border:1px solid #2a2a35;border-radius:0 0 8px 8px;z-index:600;max-height:200px;overflow-y:auto;' });
+  nameWrap.appendChild(dropdown);
+  ng.appendChild(nameWrap);
+  frag.appendChild(ng);
+
+  let searchTimer = null;
+  function scheduleSearch(query) {
+    clearTimeout(searchTimer);
+    dropdown.style.display = 'none';
+    if (query.length < 3) return;
+    searchTimer = setTimeout(() => doSearch(query), 500);
+  }
+
+  async function doSearch(query) {
+    try {
+      const cityCoords = CITY_COORDS[city.name];
+      const viewbox = cityCoords
+        ? `&viewbox=${cityCoords.lon - 0.3},${cityCoords.lat + 0.3},${cityCoords.lon + 0.3},${cityCoords.lat - 0.3}&bounded=0`
+        : '';
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ' ' + city.name)}&format=json&limit=5&addressdetails=1${viewbox}`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const results = await res.json();
+      showSuggestions(results);
+    } catch(e) {
+      dropdown.style.display = 'none';
+    }
+  }
+
+  function showSuggestions(results) {
+    while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+    if (!results || results.length === 0) { dropdown.style.display = 'none'; return; }
+    results.forEach(r => {
+      const item_ = el('div', { style: 'padding:10px 12px;font-size:13px;color:#eee;cursor:pointer;border-bottom:1px solid #2a2a35' });
+      const nameText = r.name || r.display_name.split(',')[0];
+      const addrText = r.display_name;
+      item_.appendChild(el('div', { style: 'font-weight:600;margin-bottom:2px' }, nameText));
+      item_.appendChild(el('div', { style: 'font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, addrText));
+      // Prevent blur from hiding dropdown before click fires
+      item_.addEventListener('mousedown', e => e.preventDefault());
+      item_.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+      item_.addEventListener('click', () => {
+        form.name = nameText;
+        form.address = addrText;
+        ni.value = nameText;
+        ai.value = addrText;
+        dropdown.style.display = 'none';
+      });
+      // Hover highlight — works on desktop; skipped on mobile (touch handles it)
+      item_.addEventListener('mouseover', () => { item_.style.background = '#2a2a35'; });
+      item_.addEventListener('mouseout',  () => { item_.style.background = ''; });
+      dropdown.appendChild(item_);
+    });
+    dropdown.style.display = 'block';
+  }
+
+  ni.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 200));
 
   const notg = formGroup('Notes (optional)');
   const nota = el('textarea', { className: 'form-textarea', placeholder: 'Opening hours, price range, tips…' });
@@ -1900,10 +2000,56 @@ function renderThingToDoModal({ cityId, category, catLabel, item, idx }) {
   nota.addEventListener('input', e => { form.notes = e.target.value; });
   notg.appendChild(nota); frag.appendChild(notg);
 
-  const ag = formGroup('Address (optional — opens in maps)');
-  const ai = formInput('text', form.address || '', 'e.g. Via dei Vascellari, Rome');
-  ai.addEventListener('input', e => { form.address = e.target.value; });
+  // Address field appended after notes
   ag.appendChild(ai); frag.appendChild(ag);
+
+  // ── Add to Day ──
+  if (city.days && city.days.length > 0) {
+    const addDayWrap = el('div', { style: 'margin-top:14px;padding-top:14px;border-top:1px solid #1e1e26' });
+    addDayWrap.appendChild(el('div', { style: 'font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#666;font-weight:600;margin-bottom:8px' }, 'Add to Itinerary'));
+
+    const dayRow = el('div', { style: 'display:flex;gap:8px;align-items:center' });
+
+    const daySelect = document.createElement('select');
+    daySelect.className = 'form-select';
+    daySelect.setAttribute('style', 'flex:1');
+    city.days.forEach(d => {
+      const label = d.date ? `${d.date}${d.label ? ' — ' + d.label : ''}` : (d.label || 'Unnamed Day');
+      const o = el('option', { value: d.id }, label);
+      daySelect.appendChild(o);
+    });
+    dayRow.appendChild(daySelect);
+
+    const addToDayBtn = makeBtn('+ Add', city.color, true);
+    addToDayBtn.addEventListener('click', () => {
+      const selectedDay = city.days.find(d => d.id === daySelect.value);
+      if (!selectedDay) return;
+      if (!form.name.trim()) { ni.focus(); return; }
+      const newAct = {
+        id: genId(),
+        title: form.name,
+        time: '',
+        duration: '',
+        address: form.address || '',
+        notes: form.notes || '',
+        link: '',
+        files: [],
+      };
+      selectedDay.activities.push(newAct);
+      sortActivities(selectedDay);
+      save();
+      // Flash confirmation
+      addToDayBtn.textContent = '✓ Added!';
+      addToDayBtn.style.background = '#7AC67A';
+      setTimeout(() => {
+        addToDayBtn.textContent = '+ Add';
+        addToDayBtn.style.background = city.color;
+      }, 1500);
+    });
+    dayRow.appendChild(addToDayBtn);
+    addDayWrap.appendChild(dayRow);
+    frag.appendChild(addDayWrap);
+  }
 
   // Delete option if editing
   if (editing) {
@@ -2042,6 +2188,28 @@ function renderAddDayModal(cityId) {
   footer.appendChild(add);
   frag.appendChild(footer);
   return frag;
+}
+
+// ── Activity Sort ──
+function parseTimeToMins(timeStr) {
+  if (!timeStr) return Infinity;
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return Infinity;
+  let h = parseInt(match[1]);
+  const m = parseInt(match[2]);
+  const ampm = match[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+function sortActivities(day) {
+  // Only sort activities that have a time — untimed stay at the bottom
+  day.activities.sort((a, b) => {
+    const ta = parseTimeToMins(a.time);
+    const tb = parseTimeToMins(b.time);
+    return ta - tb;
+  });
 }
 
 function renderActivityModal({ cityId, dayId, activity }) {
@@ -2197,6 +2365,7 @@ function renderActivityModal({ cityId, dayId, activity }) {
     } else {
       day.activities.push({ id: genId(), ...form });
     }
+    sortActivities(day);
     save(); closeModal();
   });
   footer.appendChild(cancel);
